@@ -244,6 +244,85 @@ module.exports = function registerExtensions(app, db, bcrypt, helpers) {
     );
   });
 
+  // ——— Клиент: бронирование столов ———
+  app.get('/api/tables/availability', authenticateToken, (req, res) => {
+    const { date, time } = req.query;
+    if (!date || !time) return res.status(400).json({ error: 'Укажите дату и время' });
+
+    db.all(`SELECT * FROM tables ORDER BY number`, [], (err, tables) => {
+      if (err) return res.status(500).json({ error: err.message });
+      db.all(
+        `SELECT table_id FROM bookings WHERE booking_date = ? AND booking_time = ?
+         AND status IN ('ожидает', 'подтверждено')`,
+        [date, time],
+        (err2, booked) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+          const bookedIds = new Set(booked.map((b) => b.table_id));
+          res.json(
+            tables.map((t) => ({
+              id: t.id,
+              number: t.number,
+              capacity: t.capacity,
+              is_booked: bookedIds.has(t.id)
+            }))
+          );
+        }
+      );
+    });
+  });
+
+  app.post('/api/bookings', authenticateToken, (req, res) => {
+    const { table_id, booking_date, booking_time, guests } = req.body;
+    if (!table_id || !booking_date || !booking_time || !guests) {
+      return res.status(400).json({ error: 'Заполните все поля бронирования' });
+    }
+
+    db.get(
+      `SELECT id FROM bookings WHERE table_id = ? AND booking_date = ? AND booking_time = ?
+       AND status IN ('ожидает', 'подтверждено')`,
+      [table_id, booking_date, booking_time],
+      (err, existing) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (existing) return res.status(400).json({ error: 'Стол уже занят на это время' });
+
+        db.run(
+          `INSERT INTO bookings (user_id, table_id, booking_date, booking_time, guests, status)
+           VALUES (?, ?, ?, ?, ?, 'ожидает')`,
+          [req.user.id, table_id, booking_date, booking_time, guests],
+          function (err2) {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ id: this.lastID, message: 'Бронирование создано' });
+          }
+        );
+      }
+    );
+  });
+
+  app.get('/api/my-bookings', authenticateToken, (req, res) => {
+    db.all(
+      `SELECT b.*, t.number as table_number, t.capacity
+       FROM bookings b JOIN tables t ON b.table_id = t.id
+       WHERE b.user_id = ? ORDER BY b.booking_date DESC, b.booking_time DESC`,
+      [req.user.id],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+      }
+    );
+  });
+
+  app.put('/api/bookings/:id/cancel', authenticateToken, (req, res) => {
+    db.run(
+      `UPDATE bookings SET status = 'отменено' WHERE id = ? AND user_id = ? AND status = 'ожидает'`,
+      [req.params.id, req.user.id],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!this.changes) return res.status(400).json({ error: 'Нельзя отменить это бронирование' });
+        res.json({ message: 'Бронирование отменено' });
+      }
+    );
+  });
+
   // ——— Отмена брони сотрудником ———
   app.put('/api/employee/bookings/:id/cancel', authenticateEmployee, (req, res) => {
     db.run(`UPDATE bookings SET status = 'отменено' WHERE id = ?`, [req.params.id], (err) => {

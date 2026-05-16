@@ -737,10 +737,10 @@
             if (!item.weight.trim()) { alert('Укажите вес или объём (например: 250 мл)'); return false; }
             
             if (isNaN(item.price) || item.price <= 0) { alert('Цена должна быть строго больше нуля!'); return false; }
-            if (isNaN(item.protein) || item.protein < 0) { alert('Белки не могут быть отрицательными!'); return false; }
-            if (isNaN(item.fat) || item.fat < 0) { alert('Жиры не могут быть отрицательными!'); return false; }
-            if (isNaN(item.carbs) || item.carbs < 0) { alert('Углеводы не могут быть отрицательными!'); return false; }
-            if (isNaN(item.calories) || item.calories < 0) { alert('Калории не могут быть отрицательными!'); return false; }
+            if (isNaN(item.protein) || item.protein <= 0) { alert('Белки должны быть больше 0'); return false; }
+            if (isNaN(item.fat) || item.fat <= 0) { alert('Жиры должны быть больше 0'); return false; }
+            if (isNaN(item.carbs) || item.carbs <= 0) { alert('Углеводы должны быть больше 0'); return false; }
+            if (isNaN(item.calories) || item.calories <= 0) { alert('Калории должны быть больше 0'); return false; }
             
             return true;
         }

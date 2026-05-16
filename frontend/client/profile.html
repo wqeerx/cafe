@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Профиль</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <script src="../shared/zerno-utils.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
         .container { max-width: 900px; margin: 30px auto; padding: 0 20px 60px; }
@@ -100,6 +101,7 @@
             document.getElementById('editFullname').value = user.fullname || '';
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editPhone').value = user.phone || '';
+            setupPhoneInput('editPhone');
         }
 
         async function loadOrders() {
@@ -157,7 +159,7 @@
             const body = {
                 fullname: document.getElementById('editFullname').value,
                 email: document.getElementById('editEmail').value,
-                phone: document.getElementById('editPhone').value,
+                phone: getPhoneForSubmit('editPhone'),
                 password: document.getElementById('editPassword').value
             };
             const res = await fetch(API + '/user/profile', {

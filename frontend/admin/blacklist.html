@@ -167,12 +167,16 @@
 <body>
 
     <div class="header">
-        <h2>Чёрный список клиентов</h2>
+        <h2>Блокировка учётных записей</h2>
         <a href="index.html" class="back-btn">← На главную</a>
     </div>
 
     <div class="container">
-        <input type="text" id="search" class="search-box" placeholder="Поиск по телефону, email или имени..." onkeyup="filterClients()">
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+            <button type="button" id="tabClients" onclick="switchTab('client')" style="padding:10px 22px;border-radius:30px;border:2px solid #e0d0c0;background:#2c1810;color:#e8d5b5;cursor:pointer;font-weight:600;">Клиенты</button>
+            <button type="button" id="tabEmployees" onclick="switchTab('employee')" style="padding:10px 22px;border-radius:30px;border:2px solid #e0d0c0;background:white;cursor:pointer;font-weight:600;">Сотрудники</button>
+        </div>
+        <input type="text" id="search" class="search-box" placeholder="Поиск по телефону, email или имени..." onkeyup="filterList()">
         <div id="clientsList" class="clients-grid">
             <div style="text-align:center; padding:40px; color: #7a7065;">Загрузка...</div>
         </div>
@@ -181,14 +185,24 @@
     <script>
         const API = 'http://localhost:3000/api';
         let token = localStorage.getItem('token');
-        let allClients = [];
+        let allUsers = [];
+        let currentTab = 'client';
 
-        async function loadClients() {
-            const res = await fetch(API + '/admin/clients', {
+        function switchTab(type) {
+            currentTab = type;
+            document.getElementById('tabClients').style.background = type === 'client' ? '#2c1810' : 'white';
+            document.getElementById('tabClients').style.color = type === 'client' ? '#e8d5b5' : '#2c1810';
+            document.getElementById('tabEmployees').style.background = type === 'employee' ? '#2c1810' : 'white';
+            document.getElementById('tabEmployees').style.color = type === 'employee' ? '#e8d5b5' : '#2c1810';
+            loadUsers();
+        }
+
+        async function loadUsers() {
+            const res = await fetch(API + '/admin/users-list?type=' + currentTab, {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-            allClients = await res.json();
-            displayClients(allClients);
+            allUsers = await res.json();
+            filterList();
         }
 
         function displayClients(clients) {
@@ -218,9 +232,9 @@
             `).join('');
         }
 
-        function filterClients() {
+        function filterList() {
             const search = document.getElementById('search').value.toLowerCase();
-            const filtered = allClients.filter(c => 
+            const filtered = allUsers.filter(c => 
                 (c.phone && c.phone.toLowerCase().includes(search)) ||
                 (c.email && c.email.toLowerCase().includes(search)) ||
                 (c.fullname && c.fullname.toLowerCase().includes(search))
@@ -235,13 +249,13 @@
                     method: 'PUT',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
-                loadClients();
+                loadUsers();
             }
         }
 
         window.onload = () => {
             if (!token) window.location.href = '/employee/login.html';
-            loadClients();
+            loadUsers();
         };
     </script>
 </body>
