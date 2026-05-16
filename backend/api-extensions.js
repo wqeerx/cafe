@@ -264,20 +264,29 @@ module.exports = function registerExtensions(app, db, bcrypt, helpers) {
       return res.status(400).json({ error: 'Комментарий не более 200 символов' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    if (date < today) return res.status(400).json({ error: 'Нельзя выбрать прошедшую дату' });
+    const moscowToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Moscow' });
+    if (date < moscowToday) return res.status(400).json({ error: 'Нельзя выбрать прошедшую дату' });
 
     const [h, m] = time.split(':').map(Number);
     const minutes = h * 60 + m;
     if (minutes < 10 * 60 || minutes > 22 * 60) {
-      return res.status(400).json({ error: 'Время работы кофейни: 10:00–22:00' });
+      return res.status(400).json({ error: 'Время работы кофейни: 10:00–22:00 (МСК)' });
     }
 
-    const now = new Date();
-    const orderDateTime = new Date(`${date}T${time}`);
-    const minTime = new Date(now.getTime() + 30 * 60000);
-    if (orderDateTime < minTime) {
-      return res.status(400).json({ error: 'Минимум +30 минут от текущего времени на сбор заказа' });
+    const moscowParts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Moscow',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(new Date());
+    const moscowHour = parseInt(moscowParts.find((p) => p.type === 'hour').value, 10);
+    const moscowMinute = parseInt(moscowParts.find((p) => p.type === 'minute').value, 10);
+    let minTotal = moscowHour * 60 + moscowMinute + 30;
+    minTotal = Math.ceil(minTotal / 30) * 30;
+    const orderTotal = h * 60 + m;
+    const isToday = date === moscowToday;
+    if (isToday && orderTotal < minTotal) {
+      return res.status(400).json({ error: 'Минимум +30 минут от текущего времени (МСК) на сбор заказа' });
     }
 
     const pay = paymentMethod === 'card' ? 'карта' : 'наличные';

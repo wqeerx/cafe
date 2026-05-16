@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Кофейня</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <script src="../shared/zerno-utils.js"></script>
     <style>
         * {
             margin: 0;
@@ -182,13 +183,6 @@
             flex-shrink: 0;
         }
 
-        .cart-item-row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #f5e6d3;
-        }
 
         .search-results {
             position: absolute;
@@ -691,11 +685,14 @@
 
         .cart-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             padding: 16px 0;
             border-bottom: 1px solid #f5e6d3;
             gap: 12px;
+        }
+
+        .cart-item .cart-item-thumb {
+            flex-shrink: 0;
         }
 
         .cart-item-info {
@@ -820,6 +817,7 @@
             max-width: 450px;
             width: 90%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            position: relative;
             position: relative;
         }
 
@@ -1181,6 +1179,22 @@
         <div class="container">
             <button class="back-btn" onclick="showCatalog()">← Назад к категориям</button>
             <h2 class="section-title" id="categoryTitle"></h2>
+            <div class="filter-bar" id="categoryFilters">
+                <span style="font-weight:600;font-size:14px;color:#2d2418;">Фильтры:</span>
+                <select id="catMaxPrice" onchange="applyCategoryFilters()" title="Цена до">
+                    <option value="">Любая цена</option>
+                    <option value="5">До 5 BYN</option>
+                    <option value="8">До 8 BYN</option>
+                    <option value="12">До 12 BYN</option>
+                    <option value="20">До 20 BYN</option>
+                </select>
+                <select id="catSort" onchange="applyCategoryFilters()" title="Сортировка">
+                    <option value="">По умолчанию</option>
+                    <option value="price_asc">Цена: по возрастанию</option>
+                    <option value="price_desc">Цена: по убыванию</option>
+                    <option value="popularity">По популярности</option>
+                </select>
+            </div>
             <div class="menu-grid" id="productsGrid"></div>
         </div>
     </div>
@@ -1243,6 +1257,9 @@
     <!-- Модалка Регистрации -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
+            <button type="button" class="modal-close" onclick="closeModal('registerModal')" aria-label="Закрыть">
+                <span class="material-symbols-rounded">close</span>
+            </button>
             <h3 class="modal-title">Создать аккаунт</h3>
             <p class="modal-subtitle">Присоединяйтесь к Zerno</p>
             
@@ -1254,7 +1271,7 @@
             
             <div class="form-group">
                 <label>Телефон</label>
-                <input type="text" id="regPhone" placeholder="+375 (XX) XXX-XX-XX">
+                <input type="tel" id="regPhone" placeholder="+375_________" autocomplete="tel">
             </div>
             
             <div class="form-group">
@@ -1295,6 +1312,9 @@
     <!-- Модалка Входа -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
+            <button type="button" class="modal-close" onclick="closeModal('loginModal')" aria-label="Закрыть">
+                <span class="material-symbols-rounded">close</span>
+            </button>
             <h3 class="modal-title">Добро пожаловать</h3>
             <p class="modal-subtitle">Войдите в свой аккаунт</p>
             
@@ -1404,6 +1424,10 @@
         function showCatalog() {
             document.getElementById('productsSection').classList.remove('active');
             document.getElementById('catalog').style.display = 'block';
+            const catMax = document.getElementById('catMaxPrice');
+            const catSort = document.getElementById('catSort');
+            if (catMax) catMax.value = '';
+            if (catSort) catSort.value = '';
             scrollToCatalog();
         }
 
@@ -1443,7 +1467,10 @@
 
         function applyCategoryFilters() {
             const sort = document.getElementById('catSort')?.value || '';
-            const products = applyItemFilters(currentCategoryProducts, sort);
+            const maxPrice = document.getElementById('catMaxPrice')?.value;
+            let base = [...currentCategoryProducts];
+            if (maxPrice) base = base.filter(i => i.price <= parseFloat(maxPrice));
+            const products = applyItemFilters(base, sort);
             const container = document.getElementById('productsGrid');
             if (!products.length) { container.innerHTML = '<p>Нет позиций</p>'; return; }
             container.innerHTML = products.map(item => buildProductCard(item)).join('');
@@ -1643,7 +1670,9 @@
                 const thumb = i.image_url
                     ? '<img class="cart-item-thumb" src="'+i.image_url+'" onerror="this.style.display=\'none\'">'
                     : '<div class="cart-item-thumb" style="display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded">coffee</span></div>';
-                return '<div class="cart-item-row">'+thumb+'<div style="flex:1"><strong>'+i.name+'</strong><br>'+i.price.toFixed(2)+' BYN × '+i.quantity+'<div style="margin-top:8px"><button class="cart-qty-btn" onclick="removeFromCart('+i.id+')">−</button> <span>'+i.quantity+'</span> <button class="cart-qty-btn" onclick="addToCartById('+i.id+')">+</button></div></div></div>';
+                return '<div class="cart-item">'+thumb+
+                    '<div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-price">'+i.price.toFixed(2)+' BYN</div></div>'+
+                    '<div class="cart-item-controls"><button type="button" class="cart-qty-btn" onclick="removeFromCart('+i.id+')">−</button><span class="cart-qty">'+i.quantity+'</span><button type="button" class="cart-qty-btn" onclick="addToCartById('+i.id+')">+</button></div></div>';
             }).join('');
             
             let total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -1685,13 +1714,14 @@
         // Авторизация и профиль
         async function register() {
             let email = document.getElementById('regEmail').value, 
-                phone = document.getElementById('regPhone').value, 
+                phone = getPhoneForSubmit('regPhone'), 
                 name = document.getElementById('regName').value, 
                 p1 = document.getElementById('regPass').value, 
                 p2 = document.getElementById('regPass2').value;
             
             // Валидация
             if (!email || !phone || !p1 || !name) return alert('Заполните все поля');
+            if (phone.replace(/\D/g, '').length < 12) return alert('Введите номер полностью: +375 и 9 цифр');
             if (!validateEmail('regEmail')) return alert('Введите корректный email');
             if (!validatePassword(p1)) return alert('Пароль не соответствует требованиям');
             if (p1 !== p2) {
@@ -1820,6 +1850,7 @@
         document.getElementById('locationsGrid').innerHTML = locations.map(l => `<div class="location-card"><h3>📍 ${l.name}</h3><div>${l.address}</div><div>🕐 ${l.hours}</div><div>📞 ${l.phone}</div></div>`).join('');
 
         window.onload = async () => {
+            setupPhoneInput('regPhone');
             let token = localStorage.getItem('token');
             if (token) {
                 try {

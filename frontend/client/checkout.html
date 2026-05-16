@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Оформление заказа</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <script src="../shared/zerno-utils.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
         .container { max-width: 700px; margin: 30px auto; padding: 0 20px 60px; }
@@ -26,6 +27,7 @@
             padding: 14px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer;
         }
         .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .tz-note { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -38,6 +40,7 @@
     <div class="container">
         <div class="card" id="orderSummary"></div>
         <div class="card">
+            <p class="tz-note">Время указано по Москве (МСК, UTC+3)</p>
             <div class="form-group">
                 <label>Дата самовывоза</label>
                 <input type="date" id="orderDate">
@@ -45,7 +48,7 @@
             <div class="form-group">
                 <label>Время</label>
                 <input type="time" id="orderTime" step="1800">
-                <p class="hint">Кофейня работает с 10:00 до 22:00. Минимум +30 мин от текущего времени.</p>
+                <p class="hint">Кофейня работает с 10:00 до 22:00 (МСК). Минимум +30 мин от текущего времени.</p>
             </div>
             <div class="form-group">
                 <label>Комментарий к заказу</label>
@@ -71,26 +74,28 @@
         function getToken() { return localStorage.getItem('token'); }
 
         function initDates() {
-            const today = new Date();
-            const dateStr = today.toISOString().split('T')[0];
-            document.getElementById('orderDate').min = dateStr;
-            document.getElementById('orderDate').value = dateStr;
+            const slot = getMinOrderSlotMoscow();
+            const dateInput = document.getElementById('orderDate');
+            const timeInput = document.getElementById('orderTime');
 
-            const minTime = new Date(today.getTime() + 30 * 60000);
-            let h = minTime.getHours();
-            let m = minTime.getMinutes() >= 30 ? 30 : 0;
-            if (m === 0 && minTime.getMinutes() > 0) h++;
-            if (h < 10) { h = 10; m = 0; }
-            if (h > 22) { h = 10; m = 0; document.getElementById('orderDate').value = addDays(dateStr, 1); }
-            document.getElementById('orderTime').value = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-            document.getElementById('orderTime').min = '10:00';
-            document.getElementById('orderTime').max = '22:00';
-        }
+            dateInput.min = slot.minDate;
+            dateInput.value = slot.date;
+            timeInput.min = '10:00';
+            timeInput.max = '22:00';
+            timeInput.value = slot.time;
 
-        function addDays(dateStr, days) {
-            const d = new Date(dateStr);
-            d.setDate(d.getDate() + days);
-            return d.toISOString().split('T')[0];
+            const syncTimeMin = () => {
+                if (dateInput.value === getMoscowDateStr()) {
+                    const s = getMinOrderSlotMoscow();
+                    timeInput.min = s.time;
+                    if (timeInput.value < s.time) timeInput.value = s.time;
+                } else {
+                    timeInput.min = '10:00';
+                    if (!timeInput.value || timeInput.value < '10:00') timeInput.value = '10:00';
+                }
+            };
+            dateInput.addEventListener('change', syncTimeMin);
+            syncTimeMin();
         }
 
         function renderSummary() {
@@ -148,3 +153,4 @@
     </script>
 </body>
 </html>
+
