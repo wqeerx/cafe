@@ -1407,6 +1407,48 @@
             scrollToCatalog();
         }
 
+        let currentCategoryProducts = [];
+
+        function applyItemFilters(items, sortVal) {
+            let list = [...items];
+            const cat = document.getElementById('searchCategory')?.value;
+            if (cat) list = list.filter(i => String(i.category_id) === String(cat));
+            if (sortVal === 'price_asc') list.sort((a, b) => a.price - b.price);
+            else if (sortVal === 'price_desc') list.sort((a, b) => b.price - a.price);
+            else if (sortVal === 'popularity') list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            return list;
+        }
+
+        function buildProductCard(item) {
+            const img = item.image_url
+                ? `<img src="${item.image_url}" onerror="this.parentElement.innerHTML='<span class=material-symbols-rounded>coffee</span>'">`
+                : '<span class="material-symbols-rounded" style="font-size:48px;color:#8a6a5a">coffee</span>';
+            return `<div class="coffee-card" style="cursor:pointer" onclick="openProduct(${item.id})">
+                <div class="card-image">${img}</div>
+                <div class="card-info">
+                    <div class="card-title">${item.name}</div>
+                    <div class="nutrition">${item.calories || 0} ккал</div>
+                    <div class="card-footer">
+                        <div class="price">${item.price.toFixed(2)} BYN</div>
+                        <button class="add-btn" onclick="event.stopPropagation();addToCartById(${item.id})">+</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function openProduct(id) {
+            const item = allItems.find(i => i.id === id);
+            if (item) showProductDetails(item);
+        }
+
+        function applyCategoryFilters() {
+            const sort = document.getElementById('catSort')?.value || '';
+            const products = applyItemFilters(currentCategoryProducts, sort);
+            const container = document.getElementById('productsGrid');
+            if (!products.length) { container.innerHTML = '<p>Нет позиций</p>'; return; }
+            container.innerHTML = products.map(item => buildProductCard(item)).join('');
+        }
+
         function showCategoryProducts(categoryId, categoryName) {
             currentCategoryProducts = allItems.filter(item => item.category_id == categoryId);
             document.getElementById('catalog').style.display = 'none';
@@ -1425,10 +1467,11 @@
                 return;
             }
             
-            const filtered = allItems.filter(item => 
+            let filtered = allItems.filter(item => 
                 item.name.toLowerCase().includes(query) || 
                 (item.description && item.description.toLowerCase().includes(query))
             );
+            filtered = applyItemFilters(filtered, document.getElementById('searchSort')?.value || '');
             
             if (filtered.length === 0) {
                 resultsContainer.innerHTML = '<div class="search-result-item"><span>Ничего не найдено</span></div>';
@@ -1552,15 +1595,20 @@
             if (item) addToCart(item);
         }
         function addToCart(item) {
-            if (!currentUser) { 
-                alert('Пожалуйста, войдите в систему, чтобы делать заказы'); 
-                showLoginModal(); 
-                return; 
+            if (!currentUser) {
+                showLoginModal();
+                return;
             }
             let existing = cart.find(i => i.id === item.id);
-            if (existing) existing.quantity++;
-            else cart.push({ ...item, quantity: 1 });
+            if (existing) {
+                if (existing.quantity >= 5) return;
+                existing.quantity++;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
             updateCart();
+            saveCart();
+            showCartToast();
         }
 
         function removeFromCart(id) {
@@ -1570,6 +1618,7 @@
                 else cart.splice(idx, 1); 
             }
             updateCart();
+            if (currentUser) saveCart();
         }
 
         function updateCart() {
@@ -1593,8 +1642,8 @@
             container.innerHTML = cart.map(i => {
                 const thumb = i.image_url
                     ? '<img class="cart-item-thumb" src="'+i.image_url+'" onerror="this.style.display=\'none\'">'
-                    : '<div class="cart-item-thumb" style="display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded">coffee</span></div>'.replace(/${D}/g, D);
-                return '<div class="cart-item-row">'+thumb+'<div style="flex:1"><strong>'+i.name+'</strong><br>'+i.price.toFixed(2)+' BYN × '+i.quantity+'<div style="margin-top:8px"><button class="cart-qty-btn" onclick="removeFromCart('+i.id+')">−</button> <span>'+i.quantity+'</span> <button class="cart-qty-btn" onclick="addToCartById('+i.id+')">+</button></div></div></div>'.replace(/${D}/g, D);
+                    : '<div class="cart-item-thumb" style="display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded">coffee</span></div>';
+                return '<div class="cart-item-row">'+thumb+'<div style="flex:1"><strong>'+i.name+'</strong><br>'+i.price.toFixed(2)+' BYN × '+i.quantity+'<div style="margin-top:8px"><button class="cart-qty-btn" onclick="removeFromCart('+i.id+')">−</button> <span>'+i.quantity+'</span> <button class="cart-qty-btn" onclick="addToCartById('+i.id+')">+</button></div></div></div>';
             }).join('');
             
             let total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -1602,7 +1651,7 @@
         }
 
         function openCheckout() {
-            if (!currentUser) { alert('Войдите'); showLoginModal(); return; }
+            if (!currentUser) { showLoginModal(); return; }
             if (cart.length === 0) { alert('Корзина пуста'); return; }
             saveCart(); window.location.href = 'checkout.html';
         }
@@ -1771,30 +1820,34 @@
         document.getElementById('locationsGrid').innerHTML = locations.map(l => `<div class="location-card"><h3>📍 ${l.name}</h3><div>${l.address}</div><div>🕐 ${l.hours}</div><div>📞 ${l.phone}</div></div>`).join('');
 
         window.onload = async () => {
-            loadCartStorage(); updateCart(); let token = localStorage.getItem('token');
+            let token = localStorage.getItem('token');
             if (token) {
                 try {
-                    let payload = JSON.parse(atob(token.split('.')[1]));
+                    const payload = JSON.parse(atob(token.split('.')[1]));
                     if (payload.role === 'admin' || payload.role === 'employee') {
-                        sessionStorage.removeItem('token');
+                        localStorage.removeItem('token');
                         token = null;
-                        alert('Пожалуйста, войдите как клиент для просмотра меню и заказов');
-                        window.location.reload();
-                        return;
+                    } else {
+                        const res = await fetch(API + '/user/profile', { headers: { 'Authorization': 'Bearer ' + token } });
+                        if (res.ok) currentUser = await res.json();
+                        else localStorage.removeItem('token');
                     }
-                    let res = await fetch(API + '/user/profile', { headers: { 'Authorization': 'Bearer ' + token } });
-                    if (res.ok) currentUser = await res.json();
-                    else localStorage.removeItem('token');
-                } catch(e) { localStorage.removeItem('token'); }
+                } catch (e) {
+                    localStorage.removeItem('token');
+                }
             }
             if (currentUser) {
                 document.getElementById('authButtons').style.display = 'none';
                 document.getElementById('profileSection').style.display = 'block';
                 document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
-                document.getElementById('profileEmail').innerText = currentUser.email;
-                document.getElementById('profilePhone').innerText = currentUser.phone;
-                await loadUserOrders();
+                document.getElementById('profileEmail').innerText = currentUser.email || '';
+                loadCartStorage();
+            } else {
+                cart = [];
+                document.getElementById('authButtons').style.display = 'flex';
+                document.getElementById('profileSection').style.display = 'none';
             }
+            updateCart();
             await loadAllItems();
             await loadCategories();
         };
