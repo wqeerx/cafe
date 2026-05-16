@@ -212,6 +212,26 @@
         }
         .pdf-header h1 { color: #2c1810; font-size: 24px; }
         .pdf-header p { color: #7a7065; font-size: 14px; margin-top: 5px; }
+
+        #pdfTableDocument { display: none; background: #fff; padding: 8px; }
+        #pdfTableDocument.pdf-visible { display: block; }
+        .pdf-section { margin-bottom: 22px; page-break-inside: avoid; }
+        .pdf-section h3 {
+            font-size: 15px; color: #2c1810; margin-bottom: 10px;
+            padding-bottom: 6px; border-bottom: 2px solid #2c1810;
+        }
+        .pdf-table {
+            width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        .pdf-table th {
+            background: #2c1810; color: #e8d5b5; padding: 10px 12px;
+            text-align: left; font-weight: 600;
+        }
+        .pdf-table td {
+            padding: 9px 12px; border: 1px solid #e0d0c0;
+        }
+        .pdf-table tr:nth-child(even) td { background: #faf6f0; }
+        .pdf-table .num { text-align: right; }
     </style>
 </head>
 <body>
@@ -256,6 +276,8 @@
                 </div>
             </div>
         </div>
+
+        <div id="pdfTableDocument"></div>
 
         <div id="pdfExportWrapper">
         <div id="pdfHeaderTemplate" class="pdf-header">
@@ -490,26 +512,71 @@
             XLSX.writeFile(wb, `Zerno_${category}_отчёт_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // ПОЛНОСТЬЮ ОБНОВЛЕННАЯ КОРРЕКТНАЯ ГЕНЕРАЦИЯ PDF
-        function generatePDF(category) {
-            const wrapper = document.getElementById('pdfExportWrapper');
-            const cards = document.querySelectorAll('#printableArea .report-card');
-            const pdfHeader = document.getElementById('pdfHeaderTemplate');
-
+        function buildPdfTablesHtml(category) {
+            const d = currentData;
             const fromDate = document.getElementById('dateFrom').value || 'начало';
             const toDate = document.getElementById('dateTo').value || getMoscowDateStr();
-            document.getElementById('pdfPeriodText').innerText =
-                `Период отчёта: с ${fromDate} по ${toDate} | Создан: ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} (МСК)`;
+            const created = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
 
-            cards.forEach(card => {
-                card.style.display = (category === 'all' || card.getAttribute('data-category') === category) ? 'flex' : 'none';
-            });
+            let html = `
+                <div class="pdf-header" style="display:block;margin-bottom:20px;border-bottom:3px solid #2c1810;padding-bottom:10px;">
+                    <h1 style="color:#2c1810;font-size:22px;margin:0;">Отчёт аналитики Zerno</h1>
+                    <p style="color:#7a7065;font-size:13px;margin-top:6px;">Период: с ${fromDate} по ${toDate} · Создан: ${created} (МСК)</p>
+                </div>
+            `;
 
-            wrapper.classList.add('pdf-layout');
-            pdfHeader.style.display = 'block';
+            const show = (cat) => category === 'all' || category === cat;
+
+            if (show('orders') || show('revenue') || show('avg_check') || show('canceled') || show('new_users')) {
+                html += `<div class="pdf-section"><h3>Сводные показатели</h3><table class="pdf-table"><thead><tr><th>Показатель</th><th class="num">Значение</th></tr></thead><tbody>`;
+                if (show('orders')) html += `<tr><td>Количество заказов</td><td class="num">${d.orders_count || 0}</td></tr>`;
+                if (show('revenue')) html += `<tr><td>Выручка (BYN)</td><td class="num">${(d.revenue || 0).toFixed(2)}</td></tr>`;
+                if (show('avg_check')) html += `<tr><td>Средний чек (BYN)</td><td class="num">${(d.avg_check || 0).toFixed(2)}</td></tr>`;
+                if (show('canceled')) html += `<tr><td>Отменённые заказы</td><td class="num">${d.canceled_count || 0}</td></tr>`;
+                if (show('new_users')) html += `<tr><td>Новые пользователи</td><td class="num">${d.new_users_count || 0}</td></tr>`;
+                html += `</tbody></table></div>`;
+            }
+
+            if (show('popular') && d.popular_items && d.popular_items.length) {
+                html += `<div class="pdf-section"><h3>Топ-5 популярных позиций</h3>
+                    <table class="pdf-table"><thead><tr><th>Позиция</th><th class="num">Кол-во продаж</th></tr></thead><tbody>
+                    ${d.popular_items.map(i => `<tr><td>${i.name}</td><td class="num">${i.total_quantity}</td></tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (show('dynamics') && d.sales_dynamics && d.sales_dynamics.length) {
+                const sorted = [...d.sales_dynamics].sort((a, b) => new Date(a.date) - new Date(b.date));
+                html += `<div class="pdf-section"><h3>Динамика продаж по дням</h3>
+                    <table class="pdf-table"><thead><tr><th>Дата</th><th class="num">Заказов</th><th class="num">Выручка (BYN)</th></tr></thead><tbody>
+                    ${sorted.map(row => `<tr><td>${row.date}</td><td class="num">${row.orders_count || 0}</td><td class="num">${Number(row.revenue || 0).toFixed(2)}</td></tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (show('tables') && d.tables_load && d.tables_load.length) {
+                html += `<div class="pdf-section"><h3>Загруженность столов</h3>
+                    <table class="pdf-table"><thead><tr><th>Стол №</th><th class="num">Мест</th><th class="num">Броней</th><th class="num">Загрузка %</th></tr></thead><tbody>
+                    ${d.tables_load.map(t => `<tr><td>${t.number}</td><td class="num">${t.capacity}</td><td class="num">${t.bookings_count}</td><td class="num">${t.load_percent}%</td></tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            return html.replace(/<\/?motion\.div/g, m => m.replace('motion.', ''));
+        }
+
+        function generatePDF(category) {
+            if (!currentData || !Object.keys(currentData).length) {
+                alert('Сначала загрузите отчёты по выбранному периоду');
+                return;
+            }
+
+            const pdfDoc = document.getElementById('pdfTableDocument');
+            const wrapper = document.getElementById('pdfExportWrapper');
+
+            pdfDoc.innerHTML = buildPdfTablesHtml(category);
+            pdfDoc.classList.add('pdf-visible');
+            wrapper.style.display = 'none';
 
             const opt = {
-                margin: [12, 12, 12, 12],
+                margin: [14, 14, 14, 14],
                 filename: `Zerno_${category}_отчёт_${getMoscowDateStr()}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
@@ -518,14 +585,14 @@
             };
 
             const restore = () => {
-                wrapper.classList.remove('pdf-layout');
-                pdfHeader.style.display = 'none';
-                cards.forEach(card => { card.style.display = 'flex'; });
+                pdfDoc.classList.remove('pdf-visible');
+                pdfDoc.innerHTML = '';
+                wrapper.style.display = '';
             };
 
-            html2pdf().set(opt).from(wrapper).save().then(restore).catch(err => {
+            html2pdf().set(opt).from(pdfDoc).save().then(restore).catch(err => {
                 console.error('Ошибка генерации PDF:', err);
-                alert('Не удалось создать PDF. Попробуйте снова или экспортируйте в Excel.');
+                alert('Не удалось создать PDF.');
                 restore();
             });
         }

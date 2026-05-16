@@ -592,6 +592,27 @@
         </div>
     </div>
 
+    <div id="editCategoryModal" class="edit-modal" style="display:none;">
+        <div class="edit-modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <span class="material-symbols-rounded">category</span> Редактировать категорию
+            </div>
+            <input type="hidden" id="editCatId">
+            <div class="form-group" style="margin-bottom:14px;">
+                <label>Название *</label>
+                <input type="text" id="editCatName">
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label>URL фотографии</label>
+                <input type="url" id="editCatImage" placeholder="https://...">
+            </div>
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button class="btn-secondary" type="button" onclick="closeEditCategoryModal()">Отмена</button>
+                <button class="btn-primary" type="button" onclick="saveCategoryEdit()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = 'http://localhost:3000/api';
         let token = localStorage.getItem('token');
@@ -636,9 +657,14 @@
                     <div class="category-card-admin">
                         <div class="category-image">${imgBlock}</div>
                         <div class="category-name" title="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</div>
-                        <button class="btn-delete-cat" onclick="deleteCategory(${cat.id})">
-                            <span class="material-symbols-rounded" style="font-size:14px;">delete</span> Удалить
-                        </button>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                            <button class="btn-edit" style="padding:6px 12px;font-size:12px;" onclick="openEditCategoryModal(${cat.id})">
+                                <span class="material-symbols-rounded" style="font-size:14px;">edit</span> Изменить
+                            </button>
+                            <button class="btn-delete-cat" onclick="deleteCategory(${cat.id})">
+                                <span class="material-symbols-rounded" style="font-size:14px;">delete</span> Удалить
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -673,6 +699,39 @@
                 });
                 loadCategories();
                 loadMenu();
+            }
+        }
+
+        function openEditCategoryModal(id) {
+            const cat = categories.find(c => c.id === id);
+            if (!cat) return;
+            document.getElementById('editCatId').value = cat.id;
+            document.getElementById('editCatName').value = cat.name;
+            document.getElementById('editCatImage').value = cat.image_url || '';
+            document.getElementById('editCategoryModal').style.display = 'flex';
+        }
+
+        function closeEditCategoryModal() {
+            document.getElementById('editCategoryModal').style.display = 'none';
+        }
+
+        async function saveCategoryEdit() {
+            const id = document.getElementById('editCatId').value;
+            const name = document.getElementById('editCatName').value.trim();
+            const image_url = document.getElementById('editCatImage').value.trim();
+            if (!name) return alert('Введите название категории');
+            const res = await fetch(API + '/admin/categories/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify({ name, image_url })
+            });
+            if (res.ok) {
+                closeEditCategoryModal();
+                loadCategories();
+                loadMenu();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || 'Ошибка сохранения');
             }
         }
 

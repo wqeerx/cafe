@@ -9,19 +9,48 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header { background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
         .back-btn { background: #e8d5b5; color: #2c1810; padding: 8px 20px; border-radius: 30px; text-decoration: none; font-weight: 600; }
+        .hint { background: #fef8f0; border: 1px solid #e0d0c0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; color: #5a4a3a; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
+        .search-input {
+            flex: 1; min-width: 220px; padding: 12px 18px; border: 2px solid #e0d0c0;
+            border-radius: 30px; font-family: inherit;
+        }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; border-radius: 20px; border: 1px solid #e0d0c0; background: white; cursor: pointer; font-weight: 600; }
         .tab.active { background: #2c1810; color: white; }
         .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; border: 1px solid #e0d0c0; }
+        .order-card-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+        .btn-view {
+            background: #2c1810; color: #e8d5b5; border: none; padding: 8px 16px;
+            border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .detail-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+        }
+        .detail-modal.open { display: flex; }
+        .detail-content {
+            background: white; border-radius: 20px; padding: 28px; max-width: 520px;
+            width: 100%; max-height: 85vh; overflow-y: auto;
+        }
+        .detail-content table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+        .detail-content th, .detail-content td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .detail-content th { background: #f5f0e8; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2>Управление заказами</h2>
+            <h2>Просмотр заказов</h2>
             <a href="index.html" class="back-btn">← На главную</a>
+        </div>
+        <div class="hint">
+            Администратор только просматривает заказы. Изменение статуса выполняет сотрудник в своей панели.
+        </div>
+        <div class="toolbar">
+            <input type="text" class="search-input" id="searchOrders" placeholder="Поиск: № заказа, клиент, телефон..." oninput="renderOrders()">
         </div>
         <div class="tabs" id="statusTabs">
             <button class="tab active" data-status="all">Все</button>
@@ -29,13 +58,20 @@
             <button class="tab" data-status="готовится">Готовится</button>
             <button class="tab" data-status="готов к выдаче">Готов к выдаче</button>
             <button class="tab" data-status="выдан">Выдан</button>
+            <button class="tab" data-status="отменён">Отменён</button>
         </div>
         <div id="ordersList"></div>
     </div>
+
+    <div id="detailModal" class="detail-modal" onclick="if(event.target===this)closeDetail()">
+        <div class="detail-content" id="detailBody"></div>
+    </div>
+
     <script>
         const API = 'http://localhost:3000/api';
         const token = localStorage.getItem('token');
         let currentStatus = 'all';
+        let allOrders = [];
 
         document.querySelectorAll('#statusTabs .tab').forEach(btn => {
             btn.onclick = () => {
@@ -49,36 +85,62 @@
         async function loadOrders() {
             const url = API + '/admin/orders' + (currentStatus !== 'all' ? '?status=' + encodeURIComponent(currentStatus) : '');
             const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-            const orders = await res.json();
+            allOrders = await res.json();
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const q = document.getElementById('searchOrders').value.toLowerCase().trim();
+            let list = allOrders;
+            if (q) {
+                list = list.filter(o =>
+                    String(o.id).includes(q) ||
+                    (o.user_name && o.user_name.toLowerCase().includes(q)) ||
+                    (o.user_phone && o.user_phone.includes(q))
+                );
+            }
             const el = document.getElementById('ordersList');
-            if (!orders.length) { el.innerHTML = '<p style="text-align:center;padding:40px;">Нет заказов</p>'; return; }
-            el.innerHTML = orders.map(o => `
+            if (!list.length) { el.innerHTML = '<p style="text-align:center;padding:40px;">Нет заказов</p>'; return; }
+            el.innerHTML = list.map(o => `
                 <div class="order-card">
-                    <strong>Заказ #${o.id}</strong>
-                    <span class="status-badge status-${o.status.replace(/\s/g,'-')}">${o.status}</span>
-                    <p>${o.user_name || ''} · ${o.user_phone || ''}</p>
-                    <p>${o.order_date} ${o.order_time} · ${o.total.toFixed(2)} BYN · ${o.items_count} поз.</p>
+                    <div class="order-card-header">
+                        <div>
+                            <strong>Заказ #${o.id}</strong>
+                            <span class="status-badge status-${o.status.replace(/\s/g,'-')}">${o.status}</span>
+                        </div>
+                        <button type="button" class="btn-view" onclick="viewOrder(${o.id})">Подробнее</button>
+                    </div>
+                    <p>${o.user_name || '—'} · ${o.user_phone || '—'}</p>
+                    <p>${o.order_date} ${o.order_time} · ${Number(o.total).toFixed(2)} BYN · ${o.items_count || 0} поз.</p>
                     <p style="font-size:13px;color:#7a5a4a;">${o.comment || 'Без комментария'}</p>
-                    ${o.status !== 'выдан' && o.status !== 'отменён' ? `
-                    <select onchange="updateStatus(${o.id}, this.value)" style="margin-top:10px;padding:8px;border-radius:8px;">
-                        <option value="">Сменить статус</option>
-                        <option value="принят">Принят</option>
-                        <option value="готовится">Готовится</option>
-                        <option value="готов к выдаче">Готов к выдаче</option>
-                        <option value="выдан">Выдан</option>
-                    </select>` : ''}
                 </div>
             `).join('');
         }
 
-        async function updateStatus(id, status) {
-            if (!status) return;
-            await fetch(API + '/admin/orders/' + id + '/status', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                body: JSON.stringify({ status })
-            });
-            loadOrders();
+        async function viewOrder(id) {
+            const res = await fetch(API + '/admin/orders/' + id, { headers: { Authorization: 'Bearer ' + token } });
+            if (!res.ok) { alert('Не удалось загрузить заказ'); return; }
+            const o = await res.json();
+            document.getElementById('detailBody').innerHTML = `
+                <h3 style="margin-bottom:12px;">Заказ #${o.id}</h3>
+                <p><strong>Статус:</strong> ${o.status}</p>
+                <p><strong>Клиент:</strong> ${o.user_name || '—'}</p>
+                <p><strong>Телефон:</strong> ${o.user_phone || '—'}</p>
+                <p><strong>Дата:</strong> ${o.order_date} ${o.order_time}</p>
+                <p><strong>Оплата:</strong> ${o.payment_method || '—'}</p>
+                <p><strong>Итого:</strong> ${Number(o.total).toFixed(2)} BYN</p>
+                ${o.comment ? '<p><strong>Комментарий:</strong> ' + o.comment + '</p>' : ''}
+                <table>
+                    <tr><th>Позиция</th><th>Кол-во</th><th>Цена</th></tr>
+                    ${(o.items || []).map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${Number(i.price_at_time).toFixed(2)} BYN</td></tr>`).join('')}
+                </table>
+                <button type="button" class="btn-view" style="margin-top:16px;width:100%;" onclick="closeDetail()">Закрыть</button>
+            `;
+            document.getElementById('detailModal').classList.add('open');
+        }
+
+        function closeDetail() {
+            document.getElementById('detailModal').classList.remove('open');
         }
 
         if (!token) location.href = '/employee/login.html';
@@ -86,4 +148,3 @@
     </script>
 </body>
 </html>
-

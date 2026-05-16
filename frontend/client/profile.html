@@ -139,7 +139,7 @@
                     <div>${o.order_date} ${o.order_time} · ${o.total.toFixed(2)} BYN · ${o.payment_method || ''}</div>
                     ${o.comment ? `<div style="font-size:13px;margin-top:6px;font-style:italic;">${o.comment}</div>` : ''}
                     <div class="order-items">${(o.items || []).map(i => `${i.name} ×${i.quantity}`).join(', ')}</div>
-                    ${o.can_cancel ? `<button class="btn-cancel" onclick="cancelOrder(${o.id})">Отменить (10 мин)</button>` : ''}
+                    ${o.can_cancel ? `<button class="btn-cancel" onclick="cancelOrder(${o.id})">Отменить заказ${o.cancel_minutes_left ? ' (осталось ~' + o.cancel_minutes_left + ' мин)' : ''}</button>` : (o.status !== 'отменён' && o.status !== 'выдан' ? '<p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Отмена доступна только в течение 10 минут после оформления</p>' : '')}
                 </div>
             `).join('');
         }

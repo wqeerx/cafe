@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Управление сотрудниками</title>
+    <script src="../shared/zerno-utils.js"></script>
     <style>
         * {
             margin: 0;
@@ -187,6 +188,39 @@
             font-size: 13px;
             font-style: italic;
         }
+        .btn-edit {
+            background: #2c1810;
+            color: #e8d5b5;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+        }
+        .edit-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .edit-modal.open { display: flex; }
+        .edit-modal-box {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            max-width: 480px;
+            width: 100%;
+        }
+        .edit-modal-box .form-group { margin-bottom: 14px; }
+        .edit-modal-box label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+        .edit-modal-box input { width: 100%; padding: 10px; border: 2px solid #e0d0c0; border-radius: 12px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+        .btn-secondary { background: #e8dcc8; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -222,6 +256,21 @@
         <h2 class="section-title">Список сотрудников</h2>
         <div id="employeesList" class="employees-grid">
             <div style="text-align:center; padding:40px; color: #7a7065;">Загрузка...</div>
+        </div>
+    </div>
+
+    <div id="editEmployeeModal" class="edit-modal">
+        <div class="edit-modal-box">
+            <h3 style="margin-bottom:16px;">Редактировать сотрудника</h3>
+            <input type="hidden" id="editEmpId">
+            <div class="form-group"><label>ФИО</label><input type="text" id="editEmpFullname"></div>
+            <div class="form-group"><label>Телефон</label><input type="tel" id="editEmpPhone"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="editEmpEmail"></div>
+            <div class="form-group"><label>Новый пароль</label><input type="password" id="editEmpPassword" placeholder="Оставьте пустым, если не менять"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeEditEmployee()">Отмена</button>
+                <button type="button" class="btn-primary" onclick="saveEmployee()">Сохранить</button>
+            </div>
         </div>
     </div>
 
@@ -265,7 +314,10 @@
                             <p style="font-size: 11px; color: #7a7065; margin-top: 8px;">ID: ${emp.id}</p>
                         </div>
                         ${emp.role !== 'admin' ? `
-                            <button class="btn-delete" onclick="deleteEmployee(${emp.id})">Удалить</button>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button class="btn-edit" onclick="openEditEmployee(${emp.id})">Редактировать</button>
+                                <button class="btn-delete" onclick="deleteEmployee(${emp.id})">Удалить</button>
+                            </div>
                         ` : '<span class="disabled-text">Нельзя удалить главного админа</span>'}
                     </div>
                 `).join('');
@@ -317,6 +369,49 @@
                 }
             } catch (error) {
                 alert('Ошибка соединения');
+            }
+        }
+
+        function openEditEmployee(id) {
+            fetch(API + '/admin/employees', { headers: { Authorization: 'Bearer ' + token } })
+                .then(r => r.json())
+                .then(list => {
+                    const emp = list.find(e => e.id === id);
+                    if (!emp) return;
+                    document.getElementById('editEmpId').value = emp.id;
+                    document.getElementById('editEmpFullname').value = emp.fullname || '';
+                    document.getElementById('editEmpPhone').value = emp.phone || '';
+                    document.getElementById('editEmpEmail').value = emp.email || '';
+                    document.getElementById('editEmpPassword').value = '';
+                    setupPhoneInput('editEmpPhone');
+                    document.getElementById('editEmployeeModal').classList.add('open');
+                });
+        }
+
+        function closeEditEmployee() {
+            document.getElementById('editEmployeeModal').classList.remove('open');
+        }
+
+        async function saveEmployee() {
+            const id = document.getElementById('editEmpId').value;
+            const body = {
+                fullname: document.getElementById('editEmpFullname').value.trim(),
+                phone: getPhoneForSubmit('editEmpPhone'),
+                email: document.getElementById('editEmpEmail').value.trim(),
+                password: document.getElementById('editEmpPassword').value
+            };
+            const res = await fetch(API + '/admin/users/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                alert('Сотрудник обновлён');
+                closeEditEmployee();
+                loadEmployees();
+            } else {
+                alert(data.error || 'Ошибка сохранения');
             }
         }
 

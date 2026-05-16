@@ -42,12 +42,17 @@ module.exports = function registerExtensions(app, db, bcrypt, helpers) {
         orderIds,
         (err2, items) => {
           if (err2) return res.status(500).json({ error: err2.message });
-          const result = orders.map(o => ({
-            ...o,
-            can_cancel: o.status !== 'отменён' && o.status !== 'выдан' &&
-              (Date.now() - new Date(o.created_at)) / 60000 <= 10,
-            items: items.filter(i => i.order_id === o.id)
-          }));
+          const result = orders.map(o => {
+            const elapsedMin = (Date.now() - new Date(o.created_at)) / 60000;
+            const minutesLeft = Math.max(0, Math.ceil(10 - elapsedMin));
+            const can_cancel = o.status !== 'отменён' && o.status !== 'выдан' && elapsedMin <= 10;
+            return {
+              ...o,
+              can_cancel,
+              cancel_minutes_left: can_cancel ? minutesLeft : 0,
+              items: items.filter(i => i.order_id === o.id)
+            };
+          });
           res.json(result);
         }
       );
@@ -97,25 +102,62 @@ module.exports = function registerExtensions(app, db, bcrypt, helpers) {
   });
 
   app.put('/api/admin/orders/:id/status', authenticateAdmin, (req, res) => {
-    const { status } = req.body;
-    db.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, req.params.id], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      logAction(req.user.id, `Админ изменил статус заказа #${req.params.id} на «${status}»`);
-      res.json({ message: 'Обновлено' });
+    res.status(403).json({
+      error: 'Администратор не может менять статус заказа. Статус меняет сотрудник в панели заказов.'
     });
+  });
+
+  app.get('/api/admin/orders/:id', authenticateAdmin, (req, res) => {
+    db.get(
+      `SELECT o.*, u.phone as user_phone, u.fullname as user_name, u.email as user_email
+       FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?`,
+      [req.params.id],
+      (err, order) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+        db.all(
+          `SELECT oi.*, m.name FROM order_items oi
+           JOIN menu_items m ON oi.menu_item_id = m.id WHERE oi.order_id = ?`,
+          [req.params.id],
+          (err2, items) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ ...order, items });
+          }
+        );
+      }
+    );
   });
 
   // ——— Журнал действий ———
   app.get('/api/admin/action-logs', authenticateAdmin, (req, res) => {
-    db.all(
-      `SELECT l.*, u.fullname, u.role FROM action_logs l
-       LEFT JOIN users u ON l.user_id = u.id
-       ORDER BY l.created_at DESC LIMIT 200`,
-      (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-      }
-    );
+    const { search, role, from, to } = req.query;
+    let sql = `SELECT l.*, u.fullname, u.role, u.phone FROM action_logs l
+               LEFT JOIN users u ON l.user_id = u.id WHERE 1=1`;
+    const params = [];
+
+    if (search && String(search).trim()) {
+      const q = `%${String(search).trim()}%`;
+      sql += ` AND (l.action LIKE ? OR u.fullname LIKE ? OR u.phone LIKE ?)`;
+      params.push(q, q, q);
+    }
+    if (role && role !== 'all') {
+      sql += ` AND u.role = ?`;
+      params.push(role);
+    }
+    if (from) {
+      sql += ` AND date(l.created_at) >= date(?)`;
+      params.push(from);
+    }
+    if (to) {
+      sql += ` AND date(l.created_at) <= date(?)`;
+      params.push(to);
+    }
+    sql += ` ORDER BY l.created_at DESC LIMIT 500`;
+
+    db.all(sql, params, (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    });
   });
 
   // ——— Сотрудники: только role=employee ———
