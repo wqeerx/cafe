@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Заказы</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { background: #e8d5b5; color: #2c1810; padding: 8px 20px; border-radius: 30px; text-decoration: none; font-weight: 600; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border-radius: 20px; border: 1px solid #e0d0c0; background: white; cursor: pointer; font-weight: 600; }
+        .tab.active { background: #2c1810; color: white; }
+        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; border: 1px solid #e0d0c0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Управление заказами</h2>
+            <a href="index.html" class="back-btn">← На главную</a>
+        </div>
+        <div class="tabs" id="statusTabs">
+            <button class="tab active" data-status="all">Все</button>
+            <button class="tab" data-status="принят">Принят</button>
+            <button class="tab" data-status="готовится">Готовится</button>
+            <button class="tab" data-status="готов к выдаче">Готов к выдаче</button>
+            <button class="tab" data-status="выдан">Выдан</button>
+        </div>
+        <div id="ordersList"></div>
+    </div>
+    <script>
+        const API = 'http://localhost:3000/api';
+        const token = localStorage.getItem('token');
+        let currentStatus = 'all';
+
+        document.querySelectorAll('#statusTabs .tab').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('#statusTabs .tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                currentStatus = btn.dataset.status;
+                loadOrders();
+            };
+        });
+
+        async function loadOrders() {
+            const url = API + '/admin/orders' + (currentStatus !== 'all' ? '?status=' + encodeURIComponent(currentStatus) : '');
+            const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+            const orders = await res.json();
+            const el = document.getElementById('ordersList');
+            if (!orders.length) { el.innerHTML = '<p style="text-align:center;padding:40px;">Нет заказов</p>'; return; }
+            el.innerHTML = orders.map(o => `
+                <div class="order-card">
+                    <strong>Заказ #${o.id}</strong>
+                    <span class="status-badge status-${o.status.replace(/\s/g,'-')}">${o.status}</span>
+                    <p>${o.user_name || ''} · ${o.user_phone || ''}</p>
+                    <p>${o.order_date} ${o.order_time} · ${o.total.toFixed(2)} BYN · ${o.items_count} поз.</p>
+                    <p style="font-size:13px;color:#7a5a4a;">${o.comment || 'Без комментария'}</p>
+                    ${o.status !== 'выдан' && o.status !== 'отменён' ? `
+                    <select onchange="updateStatus(${o.id}, this.value)" style="margin-top:10px;padding:8px;border-radius:8px;">
+                        <option value="">Сменить статус</option>
+                        <option value="принят">Принят</option>
+                        <option value="готовится">Готовится</option>
+                        <option value="готов к выдаче">Готов к выдаче</option>
+                        <option value="выдан">Выдан</option>
+                    </select>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function updateStatus(id, status) {
+            if (!status) return;
+            await fetch(API + '/admin/orders/' + id + '/status', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify({ status })
+            });
+            loadOrders();
+        }
+
+        if (!token) location.href = '/employee/login.html';
+        else loadOrders();
+    </script>
+</body>
+</html>
+

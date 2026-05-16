@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Профиль</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px 60px; }
+        .profile-card {
+            background: white; border-radius: 20px; padding: 30px;
+            border: 1px solid var(--border); margin-bottom: 24px;
+        }
+        .avatar-large {
+            width: 90px; height: 90px; border-radius: 50%;
+            background: var(--primary); color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px; font-weight: bold; margin-bottom: 16px;
+        }
+        .form-grid { display: grid; gap: 16px; }
+        .form-group label { font-weight: 600; font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px; border: 2px solid var(--border);
+            border-radius: 12px; font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--primary); color: #f5e6d3; border: none;
+            padding: 12px 28px; border-radius: 30px; cursor: pointer; font-weight: 600;
+        }
+        .section-title { font-family: Georgia, serif; font-size: 22px; margin: 24px 0 12px; }
+        .order-card {
+            background: #fef8f0; border-radius: 14px; padding: 16px;
+            margin-bottom: 12px; border: 1px solid var(--border);
+        }
+        .order-items { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+        .btn-cancel {
+            background: transparent; border: 1px solid var(--danger);
+            color: var(--danger); padding: 6px 14px; border-radius: 20px;
+            cursor: pointer; font-size: 12px; margin-top: 10px;
+        }
+        .tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab {
+            padding: 8px 20px; border-radius: 20px; border: 2px solid var(--border);
+            background: white; cursor: pointer; font-weight: 500;
+        }
+        .tab.active { background: var(--primary); color: #f5e6d3; border-color: var(--primary); }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <a href="index.html"><span class="material-symbols-rounded">arrow_back</span> На главную</a>
+        <strong>Профиль</strong>
+        <button class="btn-primary" style="padding:8px 16px;font-size:13px;" onclick="logout()">Выйти</button>
+    </header>
+
+    <div class="container">
+        <div class="profile-card">
+            <div class="avatar-large" id="avatarLetter">?</div>
+            <h2 id="displayName">Загрузка...</h2>
+            <p id="displayEmail" style="color:var(--text-muted);"></p>
+        </div>
+
+        <div class="profile-card">
+            <h3 class="section-title">Редактирование данных</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>ФИО</label><input id="editFullname"></div>
+                <div class="form-group"><label>Email</label><input id="editEmail" type="email"></div>
+                <div class="form-group"><label>Телефон</label><input id="editPhone"></div>
+                <div class="form-group"><label>Новый пароль</label><input id="editPassword" type="password" placeholder="Оставьте пустым, если не менять"></div>
+            </div>
+            <button class="btn-primary" style="margin-top:20px;" onclick="saveProfile()">Сохранить</button>
+        </div>
+
+        <h3 class="section-title">Заказы</h3>
+        <div class="tabs">
+            <button class="tab active" onclick="showOrdersTab('active')">Текущие</button>
+            <button class="tab" onclick="showOrdersTab('history')">История</button>
+        </div>
+        <div id="ordersList"></div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let allOrders = [];
+        let ordersTab = 'active';
+
+        function getToken() { return localStorage.getItem('token'); }
+
+        async function loadProfile() {
+            if (!getToken()) { window.location.href = 'index.html'; return; }
+            const res = await fetch(API + '/user/profile', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            if (!res.ok) { logout(); return; }
+            const user = await res.json();
+            document.getElementById('displayName').textContent = user.fullname || 'Гость';
+            document.getElementById('displayEmail').textContent = user.email || user.phone || '';
+            document.getElementById('avatarLetter').textContent = (user.fullname || 'Г')[0].toUpperCase();
+            document.getElementById('editFullname').value = user.fullname || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editPhone').value = user.phone || '';
+        }
+
+        async function loadOrders() {
+            const res = await fetch(API + '/my-orders/detailed', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            allOrders = await res.json();
+            renderOrders();
+        }
+
+        function showOrdersTab(tab) {
+            ordersTab = tab;
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'active' && i === 0) || (tab === 'history' && i === 1));
+            });
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const list = ordersTab === 'active'
+                ? allOrders.filter(o => !['выдан', 'отменён'].includes(o.status))
+                : allOrders.filter(o => ['выдан', 'отменён'].includes(o.status));
+
+            const container = document.getElementById('ordersList');
+            if (!list.length) {
+                container.innerHTML = '<p style="color:var(--text-muted);">Нет заказов</p>';
+                return;
+            }
+
+            container.innerHTML = list.map(o => `
+                <div class="order-card">
+                    <div><strong>Заказ #${o.id}</strong>
+                        <span class="status-badge status-${o.status.replace(/\s/g, '-')}">${o.status}</span>
+                    </div>
+                    <div>${o.order_date} ${o.order_time} · ${o.total.toFixed(2)} BYN · ${o.payment_method || ''}</div>
+                    ${o.comment ? `<div style="font-size:13px;margin-top:6px;font-style:italic;">${o.comment}</div>` : ''}
+                    <div class="order-items">${(o.items || []).map(i => `${i.name} ×${i.quantity}`).join(', ')}</div>
+                    ${o.can_cancel ? `<button class="btn-cancel" onclick="cancelOrder(${o.id})">Отменить (10 мин)</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function cancelOrder(id) {
+            if (!confirm('Отменить заказ?')) return;
+            const res = await fetch(API + `/orders/${id}/cancel`, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            const data = await res.json();
+            if (res.ok) { alert('Заказ отменён'); loadOrders(); }
+            else alert(data.error || 'Ошибка');
+        }
+
+        async function saveProfile() {
+            const body = {
+                fullname: document.getElementById('editFullname').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                password: document.getElementById('editPassword').value
+            };
+            const res = await fetch(API + '/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) { alert('Сохранено'); loadProfile(); document.getElementById('editPassword').value = ''; }
+            else alert('Ошибка сохранения');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        window.onload = () => { loadProfile(); loadOrders(); };
+    </script>
+</body>
+</html>

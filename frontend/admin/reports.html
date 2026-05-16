@@ -322,7 +322,27 @@
             };
         }
 
+        function validateDates() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            const today = new Date().toISOString().slice(0, 10);
+            if (from && to && from > to) {
+                alert('Дата «С» не может быть позже даты «По»');
+                return false;
+            }
+            if (to && to > today) {
+                alert('Дата «По» не может быть в будущем');
+                return false;
+            }
+            if (from && from > today) {
+                alert('Дата «С» не может быть в будущем');
+                return false;
+            }
+            return true;
+        }
+
         async function loadAllReports() {
+            if (!validateDates()) return;
             const { from, to } = getDates();
             const res = await fetch(`${API}/admin/reports?from=${from}&to=${to}`, {
                 headers: { 'Authorization': 'Bearer ' + token }
@@ -414,6 +434,7 @@
         }
 
         function exportData(type) {
+            if (!validateDates()) return;
             const category = document.getElementById('exportCategory').value;
             if (type === 'excel') {
                 generateExcel(category);

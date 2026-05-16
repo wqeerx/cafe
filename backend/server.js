@@ -160,249 +160,28 @@ db.serialize(() => {
     }
   });
 });
-// ============ БРОНИРОВАНИЕ СТОЛОВ ============
 
-// Получить все столы с их статусами на выбранную дату и время
-// ============ БРОНИРОВАНИЕ СТОЛОВ ============
-let selectedTable = null;
-let currentTables = [];
-
-// Показать модалку бронирования
-function showBookingModal() {
-    if (!currentUser) {
-        alert('Пожалуйста, войдите в систему для бронирования стола');
-        showLoginModal();
-        return;
-    }
-    // Устанавливаем минимальную дату (сегодня)
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('bookingDate').min = today;
-    document.getElementById('bookingDate').value = today;
-    document.getElementById('bookingTime').value = '12:00';
-    
-    // Сброс выбранного стола
-    selectedTable = null;
-    document.getElementById('selectedTableDisplay').value = 'Не выбран';
-    document.getElementById('bookingGuests').disabled = true;
-    document.getElementById('bookingGuests').value = '1';
-    
-    document.getElementById('bookingModal').style.display = 'flex';
-    loadAvailableTables();
+// ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+function logAction(userId, action) {
+  db.run(`INSERT INTO action_logs (user_id, action) VALUES (?, ?)`, [userId, action]);
 }
 
-// Загрузка доступных столов
-async function loadAvailableTables() {
-    const date = document.getElementById('bookingDate').value;
-    const time = document.getElementById('bookingTime').value;
-    if (!date || !time) return;
-    
-    try {
-        const res = await fetch(`${API}/tables/availability?date=${date}&time=${time}`);
-        currentTables = await res.json();
-        
-        const container = document.getElementById('tablesGrid');
-        if (!container) return;
-        
-        // Сортируем столы по номеру
-        currentTables.sort((a, b) => a.number - b.number);
-        
-        container.innerHTML = currentTables.map(table => {
-            let bgColor, statusText, cursor;
-            if (table.is_booked) {
-                bgColor = '#dc3545';
-                statusText = '🔴 Занят';
-                cursor = 'not-allowed';
-            } else if (table.status === 'ожидает') {
-                bgColor = '#ffc107';
-                statusText = '🟡 Ожидает';
-                cursor = 'not-allowed';
-            } else {
-                bgColor = '#28a745';
-                statusText = '🟢 Свободен';
-                cursor = 'pointer';
-            }
-            
-            return `
-                <div class="table-item" data-table-id="${table.id}" data-table-number="${table.number}" data-capacity="${table.capacity}"
-                     style="flex:1; min-width: 100px; padding: 15px; text-align: center; 
-                            background: ${bgColor}; color: white; border-radius: 12px; 
-                            cursor: ${cursor}; opacity: ${table.is_booked || table.status === 'ожидает' ? 0.6 : 1};
-                            border: ${selectedTable?.id === table.id ? '3px solid #2d2418' : 'none'};">
-                    <div style="font-size: 28px;">🪑</div>
-                    <div><strong>Стол ${table.number}</strong></div>
-                    <div style="font-size: 12px;">${table.capacity} места</div>
-                    <div style="font-size: 11px; margin-top: 5px;">${statusText}</div>
-                </div>
-            `;
-        }).join('');
-        
-        // Добавляем обработчики кликов
-        document.querySelectorAll('.table-item').forEach(el => {
-            const tableId = parseInt(el.dataset.tableId);
-            const table = currentTables.find(t => t.id === tableId);
-            
-            // Можно выбирать только свободные столы (не забронированные)
-            if (table && !table.is_booked && table.status !== 'ожидает') {
-                el.onclick = () => selectTable(table.id, table.number, table.capacity);
-            } else {
-                el.onclick = null;
-            }
-        });
-    } catch (error) {
-        console.error('Ошибка загрузки столов:', error);
-    }
+function validatePassword(pass) {
+  if (!pass || pass.length < 7) return false;
+  return /[A-Z]/.test(pass) && /[0-9]/.test(pass) && /[!@#$%^&*(),.?":{}|<>]/.test(pass);
 }
 
-// Выбор стола
-function selectTable(tableId, tableNumber, capacity) {
-    const table = currentTables.find(t => t.id === tableId);
-    if (!table || table.is_booked || table.status === 'ожидает') {
-        alert('Этот стол уже забронирован на выбранное время');
-        return;
-    }
-    
-    selectedTable = { id: tableId, number: tableNumber, capacity: capacity };
-    document.getElementById('selectedTableDisplay').value = `Стол ${tableNumber} (${capacity} места)`;
-    document.getElementById('bookingGuests').disabled = false;
-    
-    // Устанавливаем максимальное количество гостей = вместимость стола
-    const guestsSelect = document.getElementById('bookingGuests');
-    guestsSelect.innerHTML = '';
-    for (let i = 1; i <= capacity; i++) {
-        guestsSelect.innerHTML += `<option value="${i}">${i} ${getGuestText(i)}</option>`;
-    }
-    guestsSelect.value = Math.min(capacity, 2);
-    
-    // Визуальное выделение выбранного стола
-    document.querySelectorAll('.table-item').forEach(el => {
-        if (parseInt(el.dataset.tableId) === tableId) {
-            el.style.border = '3px solid #2d2418';
-        } else {
-            el.style.border = 'none';
-        }
-    });
+function validatePhone(phone) {
+  return /^\+375\d{9}$/.test(phone.replace(/\s/g, ''));
 }
 
-function getGuestText(num) {
-    if (num === 1) return 'гость';
-    if (num <= 4) return 'гостя';
-    return 'гостей';
+function validateNutrition(val) {
+  const n = parseFloat(val);
+  return !isNaN(n) && n > 0;
 }
 
-// Создание бронирования
-async function createBooking() {
-    if (!selectedTable) {
-        alert('Выберите стол');
-        return;
-    }
-    
-    const date = document.getElementById('bookingDate').value;
-    const time = document.getElementById('bookingTime').value;
-    const guests = document.getElementById('bookingGuests').value;
-    
-    if (!date || !time) {
-        alert('Выберите дату и время');
-        return;
-    }
-    
-    // Проверка, что количество гостей не превышает вместимость стола
-    if (guests > selectedTable.capacity) {
-        alert(`Стол ${selectedTable.number} рассчитан максимум на ${selectedTable.capacity} ${getGuestText(selectedTable.capacity)}`);
-        return;
-    }
-    
-    try {
-        const res = await fetch(API + '/bookings', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': 'Bearer ' + sessionStorage.getItem('token') 
-            },
-            body: JSON.stringify({ 
-                table_id: selectedTable.id, 
-                booking_date: date, 
-                booking_time: time, 
-                guests: parseInt(guests) 
-            })
-        });
-        const data = await res.json();
-        
-        if (res.ok) {
-            alert('✅ Бронирование создано! Ожидайте подтверждения от администратора.');
-            closeModal('bookingModal');
-            if (typeof loadUserBookings === 'function') loadUserBookings();
-            // Сбрасываем выбранный стол
-            selectedTable = null;
-        } else {
-            alert('❌ ' + data.error);
-        }
-    } catch (error) {
-        alert('Ошибка соединения');
-    }
-}
-
-// Загрузка бронирований пользователя
-async function loadUserBookings() {
-    if (!currentUser) return;
-    try {
-        const res = await fetch(API + '/my-bookings', { 
-            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') } 
-        });
-        const bookings = await res.json();
-        
-        const container = document.getElementById('myBookingsList');
-        if (!container) return;
-        
-        if (bookings.length === 0) {
-            container.innerHTML = '<p style="text-align:center;padding:20px;">У вас пока нет бронирований</p>';
-            return;
-        }
-        
-        container.innerHTML = bookings.map(b => {
-            let statusText = '';
-            let statusColor = '';
-            if (b.status === 'подтверждено') { statusText = '✅ Подтверждено'; statusColor = '#28a745'; }
-            else if (b.status === 'ожидает') { statusText = '⏳ Ожидает подтверждения'; statusColor = '#ffc107'; }
-            else if (b.status === 'завершено') { statusText = '✓ Завершено'; statusColor = '#6c757d'; }
-            else { statusText = '❌ Отменено'; statusColor = '#dc3545'; }
-            
-            return `
-                <div style="border-bottom: 1px solid #eee; padding: 15px;">
-                    <div><strong>Стол ${b.table_number}</strong> (${b.capacity} места)</div>
-                    <div>📅 ${b.booking_date} в ${b.booking_time}</div>
-                    <div>👥 ${b.guests} ${getGuestText(b.guests)}</div>
-                    <div>Статус: <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">${statusText}</span></div>
-                    ${b.status === 'ожидает' ? `<button onclick="cancelBooking(${b.id})" style="margin-top:10px; background:#dc3545; border:none; padding:6px 15px; border-radius:20px; color:white; cursor:pointer;">Отменить</button>` : ''}
-                </div>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Ошибка загрузки бронирований:', error);
-    }
-}
-
-// Отмена бронирования клиентом
-async function cancelBooking(bookingId) {
-    if (confirm('Отменить бронирование?')) {
-        try {
-            await fetch(API + `/bookings/${bookingId}/cancel`, {
-                method: 'PUT',
-                headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
-            });
-            loadUserBookings();
-            alert('Бронирование отменено');
-        } catch (error) {
-            alert('Ошибка отмены');
-        }
-    }
-}
-
-function showMyBookings() {
-    loadUserBookings();
-    document.getElementById('myBookingsModal').style.display = 'flex';
-}
-
-
+// ============ АВТОРИЗАЦИЯ ============
+// (бронирование отложено — клиентский код удалён из server.js)
 // ============ ДЛЯ СОТРУДНИКОВ ============
 // Получить все бронирования (для подтверждения)
 app.get('/api/employee/bookings', authenticateEmployee, (req, res) => {
@@ -485,7 +264,7 @@ app.post('/api/login', (req, res) => {
     
     // Проверка чёрного списка
     if (user.is_blocked === 1) {
-      return res.status(403).json({ error: '🚫 Ваш аккаунт заблокирован. Обратитесь к администратору.' });
+      return res.status(403).json({ error: 'Ваш аккаунт заблокирован. Обратитесь к администратору.' });
     }
     
     const match = await bcrypt.compare(password, user.password);
@@ -563,29 +342,7 @@ app.get('/api/categories', (req, res) => {
   });
 });
 
-// ============ ЗАКАЗЫ ============
-app.post('/api/orders', authenticateToken, (req, res) => {
-  const { items, total, date, time, comment, paymentMethod } = req.body;
-  const userId = req.user.id;
-  
-  db.run(`INSERT INTO orders (user_id, order_date, order_time, comment, payment_method, total, status) 
-          VALUES (?, ?, ?, ?, ?, ?, 'принят')`,
-    [userId, date, time, comment, paymentMethod, total],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      const orderId = this.lastID;
-      
-      items.forEach(item => {
-        db.run(`INSERT INTO order_items (order_id, menu_item_id, quantity, price_at_time) VALUES (?, ?, ?, ?)`,
-          [orderId, item.id, item.quantity, item.price]);
-      });
-      
-      res.json({ id: orderId, message: 'Заказ создан' });
-    });
-});
-
+// ============ ЗАКАЗЫ (создание — в api-extensions.js) ============
 app.get('/api/my-orders', authenticateToken, (req, res) => {
   db.all(`SELECT o.*, 
           (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as items_count
@@ -607,30 +364,24 @@ app.get('/api/employee/orders', authenticateEmployee, (req, res) => {
   });
 });
 
-app.put('/api/employee/orders/:id/status', authenticateEmployee, (req, res) => {
-  const { status } = req.body;
-  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, req.params.id], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'Статус обновлён' });
-  });
-});
-
-app.get('/api/employee/bookings', authenticateEmployee, (req, res) => {
-  db.all(`
-    SELECT b.*, t.number as table_number, u.phone as user_phone 
-    FROM bookings b
-    JOIN tables t ON b.table_id = t.id
-    JOIN users u ON b.user_id = u.id
-    ORDER BY b.booking_date DESC, b.booking_time DESC
-  `, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+// Статус заказа сотрудником — в api-extensions.js
 
 // ============ АДМИН: УПРАВЛЕНИЕ МЕНЮ ============
+function checkMenuNutrition(body) {
+  const fields = ['protein', 'fat', 'carbs', 'calories'];
+  for (const f of fields) {
+    if (body[f] !== undefined && body[f] !== null && body[f] !== '') {
+      const n = parseFloat(body[f]);
+      if (isNaN(n) || n <= 0) return `Поле «${f}» должно быть больше 0`;
+    }
+  }
+  return null;
+}
+
 app.post('/api/admin/menu', authenticateAdmin, (req, res) => {
   const { name, description, price, category_id, weight, protein, fat, carbs, calories, composition, image_url } = req.body;
+  const nutritionErr = checkMenuNutrition(req.body);
+  if (nutritionErr) return res.status(400).json({ error: nutritionErr });
   db.run(`INSERT INTO menu_items 
     (name, description, price, category_id, weight, protein, fat, carbs, calories, composition, image_url) 
     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
@@ -643,6 +394,8 @@ app.post('/api/admin/menu', authenticateAdmin, (req, res) => {
 
 app.put('/api/admin/menu/:id', authenticateAdmin, (req, res) => {
   const { name, description, price, category_id, weight, protein, fat, carbs, calories, composition, image_url } = req.body;
+  const nutritionErr = checkMenuNutrition(req.body);
+  if (nutritionErr) return res.status(400).json({ error: nutritionErr });
   db.run(`UPDATE menu_items SET 
     name=?, description=?, price=?, category_id=?, 
     weight=?, protein=?, fat=?, carbs=?, calories=?, 
@@ -700,15 +453,7 @@ app.get('/api/admin/users', authenticateAdmin, (req, res) => {
   });
 });
 
-app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
-  const { phone, email, fullname, role, password } = req.body;
-  const hash = await bcrypt.hash(password || 'default123', 10);
-  db.run(`INSERT INTO users (phone, email, fullname, password, role) VALUES (?,?,?,?,?)`,
-    [phone, email, fullname, hash, role], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
-    });
-});
+// Создание сотрудника — POST /api/admin/employees в api-extensions.js
 
 app.delete('/api/admin/users/:id', authenticateAdmin, (req, res) => {
   db.run(`DELETE FROM users WHERE id = ? AND role != 'admin'`, [req.params.id], (err) => {
@@ -758,29 +503,6 @@ app.post('/api/admin/tables', authenticateAdmin, (req, res) => {
 app.delete('/api/admin/tables/:id', authenticateAdmin, (req, res) => {
   db.run(`DELETE FROM tables WHERE id = ?`, [req.params.id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'deleted' });
-  });
-});
-// ============ АДМИН: УПРАВЛЕНИЕ СОТРУДНИКАМИ ============
-app.get('/api/admin/users', authenticateAdmin, (req, res) => {
-  db.all(`SELECT id, phone, email, fullname, role, is_blocked, created_at FROM users`, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
-  const { phone, email, fullname, role, password } = req.body;
-  const hash = await bcrypt.hash(password || 'default123', 10);
-  db.run(`INSERT INTO users (phone, email, fullname, password, role) VALUES (?,?,?,?,?)`,
-    [phone, email, fullname, hash, role], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
-    });
-});
-
-app.delete('/api/admin/users/:id', authenticateAdmin, (req, res) => {
-  db.run(`DELETE FROM users WHERE id = ? AND role != 'admin'`, [req.params.id], (err) => {
     res.json({ message: 'deleted' });
   });
 });
@@ -893,81 +615,15 @@ function authenticateAdmin(req, res, next) {
   });
 }
 
-// Открыть модальное окно с подробной информацией о товаре
-function showProductDetails(item) {
-    const modal = document.getElementById('productModal');
-    const title = document.getElementById('productModalTitle');
-    const content = document.getElementById('productModalContent');
-    
-    title.innerText = item.name;
-    
-    // Формируем HTML с подробной информацией
-    content.innerHTML = `
-        <div style="text-align: center;">
-            ${item.image_url ? 
-                `<img src="${item.image_url}" alt="${item.name}" style="width: 100%; max-height: 250px; object-fit: cover; border-radius: 16px; margin-bottom: 15px;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23c4a87a\'%3E%3Cpath d=\'M2 3h20v18H2V3zm2 2v14h16V5H5zm3 2h2v2H8V7zm4 0h2v2h-2V7zm4 0h2v2h-2V7zM8 11h2v2H8v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zM8 15h2v2H8v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z\'/%3E%3C/svg%3E'">` : 
-                `<div style="font-size: 80px; background: #f5e6d3; border-radius: 16px; padding: 30px; margin-bottom: 15px;">☕</div>`
-            }
-        </div>
-        
-        <div style="border-bottom: 1px solid #e8dcc8; padding-bottom: 12px;">
-            <div style="font-size: 28px; font-weight: bold; color: #2c1810;">${item.price.toFixed(2)} BYN</div>
-            ${item.weight ? `<div style="font-size: 14px; color: #7a5a4a; margin-top: 5px;">📦 ${item.weight}</div>` : ''}
-        </div>
-        
-        ${item.description ? `
-            <div>
-                <div style="font-weight: bold; color: #2c1810; margin-bottom: 8px;">📝 Описание</div>
-                <div style="color: #5a4a3a; line-height: 1.5;">${item.description}</div>
-            </div>
-        ` : ''}
-        
-        ${item.composition ? `
-            <div>
-                <div style="font-weight: bold; color: #2c1810; margin-bottom: 8px;">📋 Состав</div>
-                <div style="color: #5a4a3a; background: #fef8f0; padding: 10px; border-radius: 12px;">${item.composition}</div>
-            </div>
-        ` : ''}
-        
-        <div>
-            <div style="font-weight: bold; color: #2c1810; margin-bottom: 8px;">⚡ Пищевая ценность (на порцию)</div>
-            <div style="display: flex; gap: 20px; flex-wrap: wrap; background: #fef8f0; padding: 12px; border-radius: 12px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 20px; font-weight: bold;">${item.calories || 0}</div>
-                    <div style="font-size: 11px; color: #7a5a4a;">ккал</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 20px; font-weight: bold;">${item.protein || 0}</div>
-                    <div style="font-size: 11px; color: #7a5a4a;">белки, г</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 20px; font-weight: bold;">${item.fat || 0}</div>
-                    <div style="font-size: 11px; color: #7a5a4a;">жиры, г</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 20px; font-weight: bold;">${item.carbs || 0}</div>
-                    <div style="font-size: 11px; color: #7a5a4a;">углеводы, г</div>
-                </div>
-            </div>
-        </div>
-        
-        <div style="font-size: 12px; color: #aaa; padding-top: 10px; border-top: 1px solid #e8dcc8;">
-            📅 Доступно для заказа ежедневно с 8:00 до 22:00
-        </div>
-    `;
-    
-    // Сохраняем текущий товар в глобальную переменную для кнопки добавления
-    window.currentProductItem = item;
-    
-    // Назначаем обработчик для кнопки добавления в корзину
-    const addBtn = document.getElementById('productModalAddBtn');
-    addBtn.onclick = () => {
-        addToCart(item);
-        closeModal('productModal');
-    };
-    
-    modal.style.display = 'flex';
-}
+// Дополнительные маршруты
+require('./api-extensions')(app, db, bcrypt, {
+  authenticateToken,
+  authenticateEmployee,
+  authenticateAdmin,
+  logAction,
+  validatePassword,
+  validatePhone
+});
 
 // Запуск сервера
 app.listen(PORT, () => {

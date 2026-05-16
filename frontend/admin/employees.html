@@ -212,13 +212,6 @@
                     <input type="email" id="empEmail" placeholder="employee@zerno.by">
                 </div>
                 <div class="form-group">
-                    <label>Роль</label>
-                    <select id="empRole">
-                        <option value="employee">Сотрудник</option>
-                        <option value="admin">Администратор</option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label>Пароль (по умолчанию: 1234567)</label>
                     <input type="text" id="empPassword" placeholder="Оставьте пустым для стандартного">
                 </div>
@@ -238,7 +231,7 @@
 
         async function loadEmployees() {
             try {
-                const res = await fetch(API + '/admin/users', {
+                const res = await fetch(API + '/admin/employees', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 
@@ -250,8 +243,7 @@
                     return;
                 }
                 
-                const users = await res.json();
-                const employees = users.filter(u => u.role === 'employee' || u.role === 'admin');
+                const employees = await res.json();
                 
                 const container = document.getElementById('employeesList');
                 if (employees.length === 0) {
@@ -287,31 +279,29 @@
             const fullname = document.getElementById('empFullname').value;
             const phone = document.getElementById('empPhone').value;
             const email = document.getElementById('empEmail').value;
-            const role = document.getElementById('empRole').value;
-            let password = document.getElementById('empPassword').value;
+            const password = document.getElementById('empPassword').value;
             
             if (!phone) {
                 alert('Введите телефон сотрудника');
                 return;
             }
-            
-            if (!password) {
-                password = '1234567';
+            if (!/^\+375\d{9}$/.test(phone.replace(/\s/g, ''))) {
+                alert('Телефон: +375XXXXXXXXX');
+                return;
             }
-            
-            if (password.length < 7) {
-                alert('Пароль должен быть не менее 7 символов');
+            if (!password || password.length < 7) {
+                alert('Пароль: мин. 7 символов, заглавная, цифра, спецсимвол');
                 return;
             }
             
             try {
-                const res = await fetch(API + '/admin/users', {
+                const res = await fetch(API + '/admin/employees', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + token
                     },
-                    body: JSON.stringify({ fullname, phone, email, role, password })
+                    body: JSON.stringify({ fullname, phone, email, password })
                 });
                 
                 if (res.ok) {

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Кофейня</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
     <style>
         * {
             margin: 0;
@@ -79,6 +80,13 @@
             gap: 15px;
         }
 
+        .logo-brand-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
         .logo {
             font-size: 28px;
             font-weight: bold;
@@ -87,6 +95,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
         .logo span {
@@ -144,8 +153,41 @@
         .search-icon {
             position: absolute;
             left: 12px;
-            font-size: 14px;
             color: #8a6a5a;
+            pointer-events: none;
+        }
+
+        .search-panel {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            width: 320px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            z-index: 210;
+            display: none;
+            border: 1px solid var(--border);
+            padding: 12px;
+        }
+
+        .search-panel.show { display: block; }
+
+        .cart-item-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #f5e6d3;
+            flex-shrink: 0;
+        }
+
+        .cart-item-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5e6d3;
         }
 
         .search-results {
@@ -1075,51 +1117,57 @@
     </div>
 
     <div class="navbar">
-        <div class="logo">Zerno <span>Кофейня</span></div>
+        <div class="logo-brand-row">
+            <div class="logo">Zerno <span>Кофейня</span></div>
+            <div class="search-container">
+                <span class="material-symbols-rounded search-icon icon-sm">search</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="Поиск блюда..." oninput="handleSearch()" onfocus="showSearchResults()" onblur="hideSearchResultsDelayed()">
+                <div class="search-results" id="searchResults"></div>
+                <div class="search-panel" id="searchFilters">
+                    <div class="filter-bar" style="margin:0;padding:0;border:none;background:transparent;">
+                        <select id="searchCategory" onchange="handleSearch()"><option value="">Все категории</option></select>
+                        <select id="searchSort" onchange="handleSearch()">
+                            <option value="">Без сортировки</option>
+                            <option value="price_asc">Цена ↑</option>
+                            <option value="price_desc">Цена ↓</option>
+                            <option value="popularity">Популярность</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="nav-links">
             <a onclick="scrollToCatalog()">Меню</a>
             <a onclick="scrollToHowTo()">Как заказать</a>
             <a onclick="scrollToLocations()">Кофейни</a>
-            <a onclick="showBookingModal()" id="bookingNavBtn" style="display:none; cursor:pointer;">📅 Бронирование</a>
-            
-            <!-- Поиск -->
-            <div class="search-container">
-                <span class="search-icon">🔍</span>
-                <input type="text" class="search-input" id="searchInput" placeholder="Поиск по меню..." oninput="handleSearch()" onfocus="showSearchResults()" onblur="hideSearchResultsDelayed()">
-                <div class="search-results" id="searchResults"></div>
-            </div>
-
-            <div class="cart-icon" onclick="toggleCart()">
-                🛒 <span class="cart-count" id="cartCount">0</span>
+            <div class="icon-btn cart-icon" onclick="toggleCart()" title="Корзина" style="position:relative;">
+                <span class="material-symbols-rounded">shopping_cart</span>
+                <span class="cart-count" id="cartCount">0</span>
             </div>
             <div id="authButtons">
                 <button class="btn-outline" onclick="showLoginModal()">Вход</button>
                 <button class="btn-primary" onclick="showRegisterModal()">Регистрация</button>
             </div>
             <div class="profile-section" id="profileSection" style="display:none;">
-                <div class="avatar" id="avatar" onclick="toggleProfileDropdown()">👤</div>
+                <div class="avatar" id="avatar" onclick="toggleProfileDropdown()"><span class="material-symbols-rounded">person</span></div>
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="profile-header">
-                        <div class="profile-avatar" id="profileAvatar">👤</div>
+                        <div class="profile-avatar" id="profileAvatar"><span class="material-symbols-rounded" style="font-size:32px;">person</span></div>
                         <h4 id="profileName"></h4>
                         <p id="profileEmail"></p>
                     </div>
-                    <div class="profile-info">
-                        <p><strong>📞 Телефон:</strong> <span id="profilePhone"></span></p>
-                        <p><strong>📅 Регистрация:</strong> <span id="profileDate"></span></p>
-                        <button class="profile-edit-btn" onclick="showEditProfileModal()">✏️ Редактировать профиль</button>
-                    </div>
-                    <div style="padding: 0 15px;">
-                        <div class="profile-section-title">📋 Текущий заказ</div>
-                        <div id="currentOrder"></div>
-                        <div class="profile-section-title">📜 История заказов</div>
-                        <div id="orderHistory" style="max-height: 200px; overflow-y: auto;"></div>
-                        <button class="profile-edit-btn" onclick="showMyBookings()" style="margin-bottom:10px;">📋 Мои бронирования</button>
+                    <div style="padding:15px;">
+                        <button class="btn-primary btn-full" onclick="location.href='profile.html'">Перейти в профиль</button>
                     </div>
                     <button class="logout-btn-dropdown" onclick="logout()">Выйти</button>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="cart-toast" id="cartToast">
+        <span class="material-symbols-rounded">check_circle</span>
+        <span>Товар добавлен в корзину</span>
     </div>
 
     <div class="catalog-section" id="catalog">
@@ -1169,7 +1217,7 @@
     <div class="overlay" id="overlay" onclick="toggleCart()"></div>
     <div class="cart-sidebar" id="cart">
         <div class="cart-header">
-            <h3>🛒 Ваш заказ</h3>
+            <h3><span class="material-symbols-rounded">shopping_cart</span> Ваш заказ</h3>
             <button class="cart-close-btn" onclick="toggleCart()">&times;</button>
         </div>
         <div class="cart-items" id="cartItems">
@@ -1360,35 +1408,14 @@
         }
 
         function showCategoryProducts(categoryId, categoryName) {
-            const products = allItems.filter(item => item.category_id == categoryId);
+            currentCategoryProducts = allItems.filter(item => item.category_id == categoryId);
             document.getElementById('catalog').style.display = 'none';
             document.getElementById('productsSection').classList.add('active');
             document.getElementById('categoryTitle').innerText = categoryName;
-            const container = document.getElementById('productsGrid');
-            if (products.length === 0) { container.innerHTML = '<p>Нет позиций</p>'; return; }
-            
-            container.innerHTML = products.map(item => `
-                <div class="coffee-card" style="cursor: pointer;" onclick="showProductDetails(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                    <div class="card-image">
-                        ${item.image_url ? 
-                            `<img src="${item.image_url}" onerror="this.parentElement.innerHTML='☕'">` : 
-                            '☕'
-                        }
-                    </div>
-                    <div class="card-info">
-                        <div class="card-title">${item.name}</div>
-                        ${item.weight ? `<div style="font-size: 12px; color: #7a5a4a;">📦 ${item.weight}</div>` : ''}
-                        <div class="nutrition">🔥 ${item.calories || 0} ккал | 🥩 ${item.protein || 0}г | ${item.fat || 0}г | ${item.carbs || 0}г</div>
-                        <div class="card-footer">
-                            <div class="price">${item.price.toFixed(2)} BYN</div>
-                            <button class="add-btn" onclick="event.stopPropagation(); addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})">+</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            applyCategoryFilters();
         }
 
-        // ====== ПОИСК ======
+                // ====== ПОИСК ======
         function handleSearch() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const resultsContainer = document.getElementById('searchResults');
@@ -1514,6 +1541,16 @@
         }
 
         // Корзина
+        function showCartToast() {
+            const t = document.getElementById('cartToast');
+            if (t) { t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+        }
+        function saveCart() { localStorage.setItem('zerno_cart', JSON.stringify(cart)); }
+        function loadCartStorage() { try { const c = JSON.parse(localStorage.getItem('zerno_cart')||'[]'); if(c.length) cart=c; } catch(e){} }
+        function addToCartById(id) {
+            const item = allItems.find(i => i.id === id) || cart.find(i => i.id === id);
+            if (item) addToCart(item);
+        }
         function addToCart(item) {
             if (!currentUser) { 
                 alert('Пожалуйста, войдите в систему, чтобы делать заказы'); 
@@ -1553,19 +1590,12 @@
                 return; 
             }
             
-            container.innerHTML = cart.map(i => `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <div class="cart-item-name">${i.name}</div>
-                        <div class="cart-item-price">${i.price.toFixed(2)} BYN × ${i.quantity}</div>
-                    </div>
-                    <div class="cart-item-controls">
-                        <button class="cart-qty-btn" onclick="removeFromCart(${i.id})">−</button>
-                        <span class="cart-qty">${i.quantity}</span>
-                        <button class="cart-qty-btn" onclick='addToCart(${JSON.stringify(i)})'>+</button>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = cart.map(i => {
+                const thumb = i.image_url
+                    ? '<img class="cart-item-thumb" src="'+i.image_url+'" onerror="this.style.display=\'none\'">'
+                    : '<div class="cart-item-thumb" style="display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded">coffee</span></div>'.replace(/${D}/g, D);
+                return '<div class="cart-item-row">'+thumb+'<div style="flex:1"><strong>'+i.name+'</strong><br>'+i.price.toFixed(2)+' BYN × '+i.quantity+'<div style="margin-top:8px"><button class="cart-qty-btn" onclick="removeFromCart('+i.id+')">−</button> <span>'+i.quantity+'</span> <button class="cart-qty-btn" onclick="addToCartById('+i.id+')">+</button></div></div></div>'.replace(/${D}/g, D);
+            }).join('');
             
             let total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
             document.getElementById('cartTotal').innerText = total.toFixed(2) + ' BYN';
@@ -1574,7 +1604,7 @@
         function openCheckout() {
             if (!currentUser) { alert('Войдите'); showLoginModal(); return; }
             if (cart.length === 0) { alert('Корзина пуста'); return; }
-            document.getElementById('checkoutModal').style.display = 'flex';
+            saveCart(); window.location.href = 'checkout.html';
         }
 
         async function submitOrder() {
@@ -1741,7 +1771,7 @@
         document.getElementById('locationsGrid').innerHTML = locations.map(l => `<div class="location-card"><h3>📍 ${l.name}</h3><div>${l.address}</div><div>🕐 ${l.hours}</div><div>📞 ${l.phone}</div></div>`).join('');
 
         window.onload = async () => {
-            let token = sessionStorage.getItem('token');
+            loadCartStorage(); updateCart(); let token = localStorage.getItem('token');
             if (token) {
                 try {
                     let payload = JSON.parse(atob(token.split('.')[1]));
@@ -1754,8 +1784,8 @@
                     }
                     let res = await fetch(API + '/user/profile', { headers: { 'Authorization': 'Bearer ' + token } });
                     if (res.ok) currentUser = await res.json();
-                    else sessionStorage.removeItem('token');
-                } catch(e) { sessionStorage.removeItem('token'); }
+                    else localStorage.removeItem('token');
+                } catch(e) { localStorage.removeItem('token'); }
             }
             if (currentUser) {
                 document.getElementById('authButtons').style.display = 'none';

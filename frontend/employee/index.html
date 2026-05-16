@@ -310,19 +310,20 @@
                             <div><span class="label-text">Статус:</span> <strong>${order.status}</strong></div>
                         </div>
                     </div>
+                    ${order.status === 'выдан' ? '<p style="font-size:12px;color:#7a5a4a;margin-top:12px;">Статус нельзя изменить</p>' : `
                     <div class="status-buttons">
                         <button class="status-btn status-принят" onclick="updateStatus(${order.id}, 'принят')">Принят</button>
                         <button class="status-btn status-готовится" onclick="updateStatus(${order.id}, 'готовится')">Готовится</button>
                         <button class="status-btn status-готов" onclick="updateStatus(${order.id}, 'готов к выдаче')">Готов к выдаче</button>
                         <button class="status-btn status-выдан" onclick="updateStatus(${order.id}, 'выдан')">Выдан</button>
-                    </div>
+                    </div>`}
                 </div>
             `).join('');
         }
 
         async function updateStatus(orderId, status) {
             try {
-                await fetch(API_URL + `/employee/orders/${orderId}/status`, {
+                const res = await fetch(API_URL + `/employee/orders/${orderId}/status`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -330,6 +331,11 @@
                     },
                     body: JSON.stringify({ status })
                 });
+                if (!res.ok) {
+                    const d = await res.json();
+                    alert(d.error || 'Ошибка обновления статуса');
+                    return;
+                }
                 loadOrders();
             } catch (err) {
                 alert('Ошибка обновления статуса');
@@ -409,12 +415,14 @@
         window.onload = () => {
             token = localStorage.getItem('token');
             userRole = localStorage.getItem('userRole');
+            const userName = localStorage.getItem('userName') || 'Сотрудник';
 
             if (!token) {
                 window.location.href = 'login.html';
                 return;
             }
 
+            document.getElementById('panelTitle').innerHTML = 'Zerno — <strong>' + userName + '</strong>';
             const roleText = userRole === 'admin' ? 'Администратор' : 'Сотрудник';
             document.getElementById('roleBadge').innerText = roleText;
 

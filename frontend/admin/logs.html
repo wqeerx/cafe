@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Журнал действий</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { background: #e8d5b5; color: #2c1810; padding: 8px 20px; border-radius: 30px; text-decoration: none; font-weight: 600; }
+        .log-row { background: white; padding: 14px 18px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #e0d0c0; font-size: 14px; }
+        .log-meta { font-size: 12px; color: #7a5a4a; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Журнал действий сотрудников</h2>
+            <a href="index.html" class="back-btn">← На главную</a>
+        </div>
+        <div id="logsList">Загрузка...</div>
+    </div>
+    <script>
+        const API = 'http://localhost:3000/api';
+        const token = localStorage.getItem('token');
+        async function load() {
+            const res = await fetch(API + '/admin/action-logs', { headers: { Authorization: 'Bearer ' + token } });
+            const logs = await res.json();
+            const el = document.getElementById('logsList');
+            if (!logs.length) { el.innerHTML = '<p>Записей пока нет</p>'; return; }
+            el.innerHTML = logs.map(l => `
+                <div class="log-row">
+                    <strong>${l.fullname || 'ID ' + l.user_id}</strong> (${l.role || '—'})
+                    <div>${l.action}</div>
+                    <div class="log-meta">${new Date(l.created_at).toLocaleString('ru-RU')}</div>
+                </div>
+            `).join('');
+        }
+        if (!token) location.href = '/employee/login.html';
+        else load();
+    </script>
+</body>
+</html>

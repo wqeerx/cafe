@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Оформление заказа</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
+        .container { max-width: 700px; margin: 30px auto; padding: 0 20px 60px; }
+        .card {
+            background: white; border-radius: 20px; padding: 28px;
+            border: 1px solid var(--border); margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px; border: 2px solid var(--border);
+            border-radius: 12px; font-family: inherit;
+        }
+        .char-count { font-size: 12px; color: var(--text-muted); text-align: right; }
+        .summary-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f0e8; font-size: 14px; }
+        .total-row { font-size: 20px; font-weight: bold; margin-top: 12px; }
+        .btn-primary {
+            width: 100%; background: var(--primary); color: #f5e6d3; border: none;
+            padding: 14px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+        .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <a href="index.html"><span class="material-symbols-rounded">arrow_back</span> Назад</a>
+        <strong>Оформление заказа</strong>
+        <span></span>
+    </header>
+
+    <div class="container">
+        <div class="card" id="orderSummary"></div>
+        <div class="card">
+            <div class="form-group">
+                <label>Дата самовывоза</label>
+                <input type="date" id="orderDate">
+            </div>
+            <div class="form-group">
+                <label>Время</label>
+                <input type="time" id="orderTime" step="1800">
+                <p class="hint">Кофейня работает с 10:00 до 22:00. Минимум +30 мин от текущего времени.</p>
+            </div>
+            <div class="form-group">
+                <label>Комментарий к заказу</label>
+                <textarea id="orderComment" rows="3" maxlength="200" placeholder="Пожелания к заказу..."></textarea>
+                <div class="char-count"><span id="charCount">0</span>/200</div>
+            </div>
+            <div class="form-group">
+                <label>Способ оплаты</label>
+                <select id="payment">
+                    <option value="card">Банковская карта</option>
+                    <option value="cash">Наличные при получении</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="submitOrder()">Подтвердить заказ</button>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        const MAX_COMMENT = 200;
+        let cart = [];
+
+        function getToken() { return localStorage.getItem('token'); }
+
+        function initDates() {
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            document.getElementById('orderDate').min = dateStr;
+            document.getElementById('orderDate').value = dateStr;
+
+            const minTime = new Date(today.getTime() + 30 * 60000);
+            let h = minTime.getHours();
+            let m = minTime.getMinutes() >= 30 ? 30 : 0;
+            if (m === 0 && minTime.getMinutes() > 0) h++;
+            if (h < 10) { h = 10; m = 0; }
+            if (h > 22) { h = 10; m = 0; document.getElementById('orderDate').value = addDays(dateStr, 1); }
+            document.getElementById('orderTime').value = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            document.getElementById('orderTime').min = '10:00';
+            document.getElementById('orderTime').max = '22:00';
+        }
+
+        function addDays(dateStr, days) {
+            const d = new Date(dateStr);
+            d.setDate(d.getDate() + days);
+            return d.toISOString().split('T')[0];
+        }
+
+        function renderSummary() {
+            const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+            document.getElementById('orderSummary').innerHTML = `
+                <h3 style="margin-bottom:12px;font-family:Georgia,serif;">Ваш заказ</h3>
+                ${cart.map(i => `<div class="summary-item"><span>${i.name} ×${i.quantity}</span><span>${(i.price * i.quantity).toFixed(2)} BYN</span></div>`).join('')}
+                <div class="total-row">Итого: ${total.toFixed(2)} BYN</div>
+            `;
+        }
+
+        document.getElementById('orderComment').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+
+        async function submitOrder() {
+            const comment = document.getElementById('orderComment').value;
+            if (comment.length > MAX_COMMENT) {
+                alert('Комментарий не более 200 символов');
+                return;
+            }
+            const order = {
+                items: cart,
+                total: cart.reduce((s, i) => s + i.price * i.quantity, 0),
+                date: document.getElementById('orderDate').value,
+                time: document.getElementById('orderTime').value,
+                comment,
+                paymentMethod: document.getElementById('payment').value
+            };
+            const res = await fetch(API + '/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify(order)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.removeItem('zerno_cart');
+                alert('Заказ оформлен!');
+                window.location.href = 'profile.html';
+            } else {
+                alert(data.error || 'Ошибка оформления');
+            }
+        }
+
+        window.onload = () => {
+            if (!getToken()) { window.location.href = 'index.html'; return; }
+            try { cart = JSON.parse(localStorage.getItem('zerno_cart') || '[]'); } catch(e) { cart = []; }
+            if (!cart.length) { window.location.href = 'index.html'; return; }
+            initDates();
+            renderSummary();
+        };
+    </script>
+</body>
+</html>
