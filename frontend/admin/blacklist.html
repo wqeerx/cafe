@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Чёрный список</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f0e8;
+            color: #2c1810;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Соответствие общему стилю index.html */
+        .header {
+            background: #2c1810;
+            color: #e8d5b5;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            background: #e8d5b5;
+            color: #2c1810;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        .back-btn:hover {
+            background: #2c1810;
+            color: #e8d5b5;
+            border: 1px solid #e8d5b5;
+        }
+        
+        /* Поисковая панель */
+        .search-box {
+            margin-bottom: 25px;
+            padding: 14px 25px;
+            width: 100%;
+            border: 2px solid #e0d0c0;
+            border-radius: 30px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #2c1810;
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        
+        .search-box:focus {
+            border-color: #2c1810;
+        }
+        
+        /* Список карточек клиентов */
+        .clients-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .client-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e0d0c0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .client-info h3 {
+            color: #2c1810;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        
+        .client-info p {
+            color: #7a5a4a;
+            font-size: 14px;
+            margin: 4px 0;
+        }
+        
+        .client-info span.label-text {
+            color: #7a7065;
+            font-weight: 500;
+        }
+        
+        /* Статусы и элементы управления */
+        .actions-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .blocked-badge {
+            background: #fbebebd8;
+            color: #dc3545;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .active-badge {
+            background: #e8f5e9;
+            color: #28a745;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .toggle-btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            font-size: 13px;
+            transition: background 0.2s, opacity 0.2s, transform 0.1s;
+        }
+        
+        .toggle-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-block { 
+            background: #dc3545; 
+            color: white; 
+        }
+        .btn-block:hover { 
+            background: #bd2130; 
+        }
+        
+        .btn-unblock { 
+            background: #2c1810; 
+            color: #e8d5b5; 
+        }
+        .btn-unblock:hover { 
+            background: #4a3319; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Чёрный список клиентов</h2>
+        <a href="index.html" class="back-btn">← На главную</a>
+    </div>
+
+    <div class="container">
+        <input type="text" id="search" class="search-box" placeholder="Поиск по телефону, email или имени..." onkeyup="filterClients()">
+        <div id="clientsList" class="clients-grid">
+            <div style="text-align:center; padding:40px; color: #7a7065;">Загрузка...</div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let token = localStorage.getItem('token');
+        let allClients = [];
+
+        async function loadClients() {
+            const res = await fetch(API + '/admin/clients', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            allClients = await res.json();
+            displayClients(allClients);
+        }
+
+        function displayClients(clients) {
+            const container = document.getElementById('clientsList');
+            if (clients.length === 0) {
+                container.innerHTML = '<p style="text-align:center;padding:40px;color:#7a7065;">Нет клиентов</p>';
+                return;
+            }
+            container.innerHTML = clients.map(client => `
+                <div class="client-card">
+                    <div class="client-info">
+                        <h3>${client.fullname || client.phone}</h3>
+                        <p><span class="label-text">Тел:</span> ${client.phone} | <span class="label-text">Email:</span> ${client.email || '—'}</p>
+                        <p><span class="label-text">Зарегистрирован:</span> ${client.created_at || '—'}</p>
+                        <p><span class="label-text">Заказов:</span> ${client.orders_count || 0}</p>
+                    </div>
+                    <div class="actions-wrapper">
+                        <span class="status-badge ${client.is_blocked ? 'blocked-badge' : 'active-badge'}">
+                            ${client.is_blocked ? 'Заблокирован' : 'Активен'}
+                        </span>
+                        <button class="toggle-btn ${client.is_blocked ? 'btn-unblock' : 'btn-block'}" 
+                                onclick="toggleBlock(${client.id}, ${client.is_blocked})">
+                            ${client.is_blocked ? 'Разблокировать' : 'Заблокировать'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterClients() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const filtered = allClients.filter(c => 
+                (c.phone && c.phone.toLowerCase().includes(search)) ||
+                (c.email && c.email.toLowerCase().includes(search)) ||
+                (c.fullname && c.fullname.toLowerCase().includes(search))
+            );
+            displayClients(filtered);
+        }
+
+        async function toggleBlock(userId, isBlocked) {
+            const action = isBlocked ? 'unblock' : 'block';
+            if (confirm(`${isBlocked ? 'Разблокировать' : 'Заблокировать'} этого пользователя?`)) {
+                await fetch(API + `/admin/users/${userId}/${action}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                loadClients();
+            }
+        }
+
+        window.onload = () => {
+            if (!token) window.location.href = '/employee/login.html';
+            loadClients();
+        };
+    </script>
+</body>
+</html>

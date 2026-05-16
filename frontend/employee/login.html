@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Вход для сотрудников</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #2c1810 0%, #5a3725 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 400px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c1810;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #7a5a4a;
+            margin-bottom: 30px;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 2px solid #e0d0c0;
+            border-radius: 30px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #2c1810;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a3725;
+        }
+        .error {
+            color: #c0392b;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+            text-align: left;
+            background: #f5f0e8;
+            padding: 10px;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>☕ Zerno</h1>
+        <div class="subtitle">Вход для сотрудников и администратора</div>
+        <input type="text" id="phone" placeholder="Телефон" autocomplete="off">
+        <input type="password" id="password" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+        <div id="error" class="error"></div>
+        <div class="info">
+            <strong>Тестовые данные:</strong><br>
+            Сотрудник: +375291112233 / employee123<br>
+            Администратор: +375291234567 / admin123
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        async function login() {
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+
+            if (!phone || !password) {
+                errorDiv.innerText = 'Заполните все поля';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Сохраняем токен и роль
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userRole', data.user.role);
+                    localStorage.setItem('userName', data.user.fullname || data.user.phone);
+
+                    // Перенаправляем в зависимости от роли
+                    if (data.user.role === 'admin') {
+                        window.location.href = '/admin/index.html';
+                    } else if (data.user.role === 'employee') {
+                        window.location.href = '/employee/index.html';
+                    } else {
+                        errorDiv.innerText = 'У вас нет доступа к панели сотрудника';
+                    }
+                } else {
+                    errorDiv.innerText = data.error || 'Ошибка входа';
+                }
+            } catch (err) {
+                errorDiv.innerText = 'Ошибка соединения с сервером';
+            }
+        }
+
+        // Enter key
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Панель сотрудника</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f0e8;
+            color: #2c1810;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Шапка панели */
+        .header {
+            background: #2c1810;
+            color: #e8d5b5;
+            padding: 20px 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .header-title-block {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .header h2 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+        
+        .header a {
+            color: #e8d5b5;
+            text-decoration: none;
+            border-bottom: 1px dashed #e8d5b5;
+            transition: opacity 0.2s;
+        }
+        
+        .header a:hover {
+            opacity: 0.8;
+        }
+        
+        .logout-btn {
+            background: #e8d5b5;
+            color: #2c1810;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: #2c1810;
+            color: #e8d5b5;
+            border: 1px solid #e8d5b5;
+        }
+        
+        /* Вкладки (Табы) */
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .tab {
+            background: white;
+            color: #2c1810;
+            border: 1px solid #e0d0c0;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .tab:hover {
+            background: #faf6f0;
+            border-color: #2c1810;
+        }
+        
+        .tab.active {
+            background: #2c1810;
+            color: white;
+            border-color: #2c1810;
+        }
+        
+        /* Сетка списков */
+        .orders-grid, .bookings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Карточки заказов и бронирований */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid #e0d0c0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(44, 24, 16, 0.06);
+        }
+        
+        .card-header-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f5f0e8;
+            margin-bottom: 12px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            color: #2c1810;
+        }
+        
+        .card-phone {
+            font-size: 14px;
+            color: #7a5a4a;
+            font-weight: 500;
+        }
+        
+        .card-body {
+            font-size: 14px;
+            color: #2c1810;
+         
+        }
+        
+        .card-body div {
+            margin-bottom: 6px;
+        }
+        
+        .label-text {
+            color: #7a7065;
+            font-weight: 500;
+        }
+        
+        .comment-text {
+            font-style: italic;
+            color: #8c7e70;
+            background: #faf6f0;
+            padding: 6px 10px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+        
+        /* Кнопки переключения статусов */
+        .status-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        
+        .status-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            font-size: 12px;
+            transition: background 0.2s, transform 0.1s;
+        }
+        
+        .status-btn:active {
+            transform: scale(0.96);
+        }
+        
+        /* Благородная цветовая гамма статусов */
+        .status-принят { background: #fbeee0; color: #b06000; }
+        .status-принят:hover { background: #f5dfc6; }
+        
+        .status-готовится { background: #e1f5fe; color: #0288d1; }
+        .status-готовится:hover { background: #b3e5fc; }
+        
+        .status-готов { background: #e8f5e9; color: #2e7d32; }
+        .status-готов:hover { background: #c8e6c9; }
+        
+        .status-выдан { background: #eceff1; color: #546e7a; }
+        .status-выдан:hover { background: #cfd8dc; }
+        
+        /* Роли */
+        .role-badge {
+            background: #e8d5b5;
+            color: #2c1810;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .empty-message {
+            text-align: center;
+            padding: 50px;
+            color: #7a7065;
+            grid-column: 1 / -1;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title-block">
+                <h2 id="panelTitle">Zerno — Панель сотрудника</h2>
+                <span class="role-badge" id="roleBadge"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Выйти</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('orders')">Заказы</button>
+            <button class="tab" onclick="showTab('bookings')">Брони столов</button>
+        </div>
+
+        <div id="ordersPanel">
+            <div class="orders-grid" id="ordersList">
+                <div class="empty-message">Загрузка...</div>
+            </div>
+        </div>
+        
+        <div id="bookingsPanel" style="display:none;">
+            <div class="bookings-grid" id="bookingsList">
+                <div class="empty-message">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        const API = 'http://localhost:3000/api'; // Сохраняем обе вариации из оригинала
+        let token = '';
+        let userRole = '';
+
+        function showTab(tab) {
+            document.getElementById('ordersPanel').style.display = tab === 'orders' ? 'block' : 'none';
+            document.getElementById('bookingsPanel').style.display = tab === 'bookings' ? 'block' : 'none';
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'orders' && i === 0) || (tab === 'bookings' && i === 1));
+            });
+            if (tab === 'orders') loadOrders();
+            else loadBookings();
+        }
+
+        async function loadOrders() {
+            try {
+                const res = await fetch(API_URL + '/employee/orders', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) {
+                    if (res.status === 403) window.location.href = 'login.html';
+                    return;
+                }
+                const orders = await res.json();
+                displayOrders(orders);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function displayOrders(orders) {
+            const container = document.getElementById('ordersList');
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<div class="empty-message">Нет активных заказов</div>';
+                return;
+            }
+            container.innerHTML = orders.map(order => `
+                <div class="card">
+                    <div>
+                        <div class="card-header-line">
+                            <strong class="card-title">Заказ #${order.id}</strong>
+                            <span class="card-phone">Тел: ${order.user_phone}</span>
+                        </div>
+                        <div class="card-body">
+                            <div><span class="label-text">Сумма:</span> <strong>${order.total.toFixed(2)} BYN</strong></div>
+                            <div><span class="label-text">Время:</span> ${order.order_date || '—'} ${order.order_time || '—'}</div>
+                            <div class="comment-text">Комментарий: ${order.comment || 'без комментария'}</div>
+                            <div><span class="label-text">Статус:</span> <strong>${order.status}</strong></div>
+                        </div>
+                    </div>
+                    <div class="status-buttons">
+                        <button class="status-btn status-принят" onclick="updateStatus(${order.id}, 'принят')">Принят</button>
+                        <button class="status-btn status-готовится" onclick="updateStatus(${order.id}, 'готовится')">Готовится</button>
+                        <button class="status-btn status-готов" onclick="updateStatus(${order.id}, 'готов к выдаче')">Готов к выдаче</button>
+                        <button class="status-btn status-выдан" onclick="updateStatus(${order.id}, 'выдан')">Выдан</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateStatus(orderId, status) {
+            try {
+                await fetch(API_URL + `/employee/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ status })
+                });
+                loadOrders();
+            } catch (err) {
+                alert('Ошибка обновления статуса');
+            }
+        }
+
+        async function loadBookings() {
+            try {
+                const res = await fetch(API + '/employee/bookings', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const bookings = await res.json();
+                const container = document.getElementById('bookingsList');
+                
+                if (!bookings || bookings.length === 0) {
+                    container.innerHTML = '<div class="empty-message">Нет бронирований</div>';
+                    return;
+                }
+                
+                container.innerHTML = bookings.map(b => `
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="card-header-line">
+                                <strong class="card-title">Стол ${b.table_number}</strong>
+                                <span class="card-phone">${b.guests} гостей</span>
+                            </div>
+                            <div><span class="label-text">Дата:</span> ${b.booking_date} в ${b.booking_time}</div>
+                            <div><span class="label-text">Клиент:</span> ${b.user_name || b.user_phone}</div>
+                            <div><span class="label-text">Статус:</span> <strong>${b.status}</strong></div>
+                        </div>
+                        <div class="status-buttons">
+                            ${b.status === 'ожидает' ? `
+                                <button class="status-btn" style="background:#e8f5e9;color:#2e7d32;" onclick="confirmBooking(${b.id})">Подтвердить</button>
+                                <button class="status-btn" style="background:#fbebebd8;color:#dc3545;" onclick="cancelBookingByEmployee(${b.id})">Отклонить</button>
+                            ` : ''}
+                            ${b.status === 'подтверждено' ? `
+                                <button class="status-btn" style="background:#e1f5fe;color:#0288d1;width:100%;" onclick="completeBooking(${b.id})">Отметить посещение</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function confirmBooking(id) {
+            await fetch(API + `/employee/bookings/${id}/confirm`, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadBookings();
+        }
+
+        async function cancelBookingByEmployee(id) {
+            await fetch(API + `/employee/bookings/${id}/cancel`, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadBookings();
+        }
+
+        async function completeBooking(id) {
+            await fetch(API + `/employee/bookings/${id}/complete`, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadBookings();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userRole');
+            window.location.href = 'login.html';
+        }
+
+        window.onload = () => {
+            token = localStorage.getItem('token');
+            userRole = localStorage.getItem('userRole');
+
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const roleText = userRole === 'admin' ? 'Администратор' : 'Сотрудник';
+            document.getElementById('roleBadge').innerText = roleText;
+
+            if (userRole === 'admin') {
+                const titleElement = document.getElementById('panelTitle');
+                titleElement.innerHTML = 'Zerno — Панель администратора <a href="/admin/index.html" style="margin-left:15px;font-size:14px;">Перейти в админку →</a>';
+            }
+
+            loadOrders();
+        };
+    </script>
+</body>
+</html>

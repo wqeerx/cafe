@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Отчёты и аналитика</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f0e8;
+            color: #2c1810;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: #2c1810;
+            color: #e8d5b5;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: #e8d5b5;
+            color: #2c1810;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #2c1810;
+            color: #e8d5b5;
+            border: 1px solid #e8d5b5;
+        }
+
+        .dashboard-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e0d0c0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .filter-section, .export-section {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .export-section {
+            border-left: 2px solid #f5f0e8;
+            padding-left: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .export-section {
+                border-left: none;
+                padding-left: 0;
+                border-top: 2px solid #f5f0e8;
+                padding-top: 20px;
+                width: 100%;
+            }
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #7a7065;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 10px;
+            border: 2px solid #e0d0c0;
+            border-radius: 12px;
+            font-family: inherit;
+            color: #2c1810;
+            outline: none;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            font-family: inherit;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #2c1810; color: white; }
+        .btn-primary:hover { background: #4a3319; }
+        .btn-excel { background: #28a745; color: white; }
+        .btn-excel:hover { background: #218838; }
+        .btn-pdf { background: #dc3545; color: white; }
+        .btn-pdf:hover { background: #c82333; }
+
+        /* Сетка отчетов на экране */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 25px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #e0d0c0;
+            display: flex;
+            flex-direction: column;
+            page-break-inside: avoid; /* Предотвращает разрыв карточки посреди страницы в PDF */
+        }
+
+        .col-4 { grid-column: span 12; }
+        .col-6 { grid-column: span 12; }
+        .col-12 { grid-column: span 12; }
+
+        @media (min-width: 768px) {
+            .col-4 { grid-column: span 4; }
+            .col-6 { grid-column: span 6; }
+        }
+
+        .report-card h3 {
+            color: #2c1810;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0d0c0;
+            font-size: 16px;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c1810;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f5f0e8;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+
+        /* Специальные стили исключительно для красивой печати PDF */
+        .pdf-layout {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+            background: #ffffff !important;
+            padding: 10px !important;
+        }
+        .pdf-layout .report-card {
+            grid-column: span 12 !important; /* На листе все карточки встают в полную ширину */
+            width: 100% !important;
+            box-shadow: none !important;
+            border: 1px solid #e0d0c0 !important;
+        }
+        .pdf-header {
+            display: none;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2c1810;
+            padding-bottom: 10px;
+        }
+        .pdf-header h1 { color: #2c1810; font-size: 24px; }
+        .pdf-header p { color: #7a7065; font-size: 14px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>Отчёты и аналитика</h2>
+            <a href="index.html" class="back-btn">← На главную</a>
+        </div>
+
+        <div class="dashboard-controls">
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>С какой даты</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label>По какую дату</label>
+                    <input type="date" id="dateTo">
+                </div>
+                <button class="btn btn-primary" onclick="loadAllReports()">Применить фильтр</button>
+            </div>
+
+            <div class="export-section">
+                <div class="filter-group">
+                    <label>Категория отчёта</label>
+                    <select id="exportCategory">
+                        <option value="all">Все отчёты (Единый)</option>
+                        <option value="orders">Количество заказов</option>
+                        <option value="revenue">Выручка за период</option>
+                        <option value="avg_check">Средний чек</option>
+                        <option value="popular">Популярные позиции</option>
+                        <option value="canceled">Отменённые заказы</option>
+                        <option value="new_users">Новые пользователи</option>
+                        <option value="tables">Загруженность столов</option>
+                        <option value="dynamics">Динамика продаж</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex-direction: row; gap: 10px;">
+                    <button class="btn btn-excel" onclick="exportData('excel')">в Excel</button>
+                    <button class="btn btn-pdf" onclick="exportData('pdf')">в PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pdfHeaderTemplate" class="pdf-header">
+            <h1>Отчёт аналитики сети Zerno</h1>
+            <p id="pdfPeriodText">Период: </p>
+        </div>
+
+        <div class="reports-grid" id="printableArea">
+            
+            <div class="report-card col-4" data-category="orders">
+                <h3>Количество заказов за период</h3>
+                <div id="ordersCount" class="stat-number">—</div>
+                <p style="margin-top:10px;" id="ordersCountDetail"></p>
+            </div>
+
+            <div class="report-card col-4" data-category="revenue">
+                <h3>Выручка за период</h3>
+                <div id="revenue" class="stat-number">—</div>
+                <p style="margin-top:10px;" id="revenueDetail"></p>
+            </div>
+
+            <div class="report-card col-4" data-category="avg_check">
+                <h3>Средний чек</h3>
+                <div id="avgCheck" class="stat-number">—</div>
+            </div>
+
+            <div class="report-card col-12" data-category="dynamics">
+                <h3>Динамика продаж по дням</h3>
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+
+            <div class="report-card col-6" data-category="popular">
+                <h3>Топ-5 популярных позиций</h3>
+                <div id="popularItems"><p>Загрузка...</p></div>
+            </div>
+
+            <div class="report-card col-6" data-category="canceled">
+                <h3>Отменённые заказы</h3>
+                <div id="canceledOrders"></div>
+            </div>
+
+            <div class="report-card col-6" data-category="new_users">
+                <h3>Новые пользователи</h3>
+                <div id="newUsers" class="stat-number">—</div>
+            </div>
+
+            <div class="report-card col-6" data-category="tables">
+                <h3>Загруженность столов</h3>
+                <div id="tablesLoad"><p>Загрузка...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let token = localStorage.getItem('token');
+        let currentData = {};
+        let myChart = null;
+
+        function getDates() {
+            return {
+                from: document.getElementById('dateFrom').value,
+                to: document.getElementById('dateTo').value
+            };
+        }
+
+        async function loadAllReports() {
+            const { from, to } = getDates();
+            const res = await fetch(`${API}/admin/reports?from=${from}&to=${to}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            currentData = await res.json();
+            displayReports(currentData);
+        }
+
+        function displayReports(data) {
+            document.getElementById('ordersCount').innerHTML = data.orders_count || 0;
+            document.getElementById('ordersCountDetail').innerHTML = `Всего заказов: ${data.orders_count || 0}`;
+
+            document.getElementById('revenue').innerHTML = (data.revenue || 0).toFixed(2) + ' BYN';
+            document.getElementById('revenueDetail').innerHTML = `Выручка за период: ${(data.revenue || 0).toFixed(2)} BYN`;
+
+            document.getElementById('avgCheck').innerHTML = (data.avg_check || 0).toFixed(2) + ' BYN';
+
+            if (data.popular_items && data.popular_items.length) {
+                document.getElementById('popularItems').innerHTML = `
+                    <table>
+                        <tr><th>Позиция</th><th>Кол-во продаж</th></tr>
+                        ${data.popular_items.map(i => `<tr><td>${i.name}</td><td>${i.total_quantity}</td></tr>`).join('')}
+                    </table>
+                `;
+            } else {
+                document.getElementById('popularItems').innerHTML = '<p>Нет данных</p>';
+            }
+
+            document.getElementById('canceledOrders').innerHTML = `
+                <div class="stat-number">${data.canceled_count || 0}</div>
+                <p>Отменённых заказов за период</p>
+            `;
+
+            document.getElementById('newUsers').innerHTML = data.new_users_count || 0;
+
+            if (data.tables_load && data.tables_load.length) {
+                document.getElementById('tablesLoad').innerHTML = `
+                    <table>
+                        <tr><th>Стол #</th><th>Вместимость</th><th>Броней</th><th>Загруженность</th></tr>
+                        ${data.tables_load.map(t => `
+                            <tr>
+                                <td>${t.number}</td>
+                                <td>${t.capacity}</td>
+                                <td>${t.bookings_count}</td>
+                                <td>${t.load_percent}%</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } else {
+                document.getElementById('tablesLoad').innerHTML = '<p>Нет данных</p>';
+            }
+
+            buildChart(data.sales_dynamics || []);
+        }
+
+        function buildChart(dynamics) {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            if (myChart) { myChart.destroy(); }
+
+            const sortedDynamics = [...dynamics].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDynamics.map(d => d.date),
+                    datasets: [{
+                        label: 'Выручка (BYN)',
+                        data: sortedDynamics.map(d => d.revenue),
+                        borderColor: '#2c1810',
+                        backgroundColor: 'rgba(44, 24, 16, 0.05)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#2c1810', font: { family: 'Segoe UI' } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#2c1810' } },
+                        x: { ticks: { color: '#2c1810' } }
+                    }
+                }
+            });
+        }
+
+        function exportData(type) {
+            const category = document.getElementById('exportCategory').value;
+            if (type === 'excel') {
+                generateExcel(category);
+            } else if (type === 'pdf') {
+                generatePDF(category);
+            }
+        }
+
+        function generateExcel(category) {
+            const wsData = [
+                ['ОТЧЁТЫ ZERNO'],
+                ['Дата формирования', new Date().toLocaleString()],
+                ['Период:', document.getElementById('dateFrom').value || 'все время', 'до', document.getElementById('dateTo').value || 'все время'],
+                []
+            ];
+
+            if (category === 'all' || category === 'orders') wsData.push(['1. Количество заказов', currentData.orders_count || 0]);
+            if (category === 'all' || category === 'revenue') wsData.push(['2. Выручка (BYN)', currentData.revenue || 0]);
+            if (category === 'all' || category === 'avg_check') wsData.push(['3. Средний чек (BYN)', currentData.avg_check || 0]);
+            if (category === 'all' || category === 'canceled') wsData.push(['4. Отменённые заказы', currentData.canceled_count || 0]);
+            if (category === 'all' || category === 'new_users') wsData.push(['5. Новые пользователи', currentData.new_users_count || 0]);
+            
+            if ((category === 'all' || category === 'popular') && currentData.popular_items) {
+                wsData.push([], ['6. ТОП-5 популярных позиций'], ['Название', 'Количество продаж']);
+                currentData.popular_items.forEach(i => wsData.push([i.name, i.total_quantity]));
+            }
+            if ((category === 'all' || category === 'dynamics') && currentData.sales_dynamics) {
+                wsData.push([], ['7. Динамика продаж по дням'], ['Дата', 'Кол-во заказов', 'Выручка (BYN)']);
+                currentData.sales_dynamics.forEach(d => wsData.push([d.date, d.orders_count, d.revenue]));
+            }
+            if ((category === 'all' || category === 'tables') && currentData.tables_load) {
+                wsData.push([], ['8. Загруженность столов'], ['Стол #', 'Вместимость', 'Броней', 'Загруженность %']);
+                currentData.tables_load.forEach(t => wsData.push([t.number, t.capacity, t.bookings_count, t.load_percent]));
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws['!cols'] = [{wch:25},{wch:15},{wch:15},{wch:15}];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Zerno_Отчёты');
+            XLSX.writeFile(wb, `Zerno_${category}_отчёт_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // ПОЛНОСТЬЮ ОБНОВЛЕННАЯ КОРРЕКТНАЯ ГЕНЕРАЦИЯ PDF
+        function generatePDF(category) {
+            const element = document.getElementById('printableArea');
+            const cards = document.querySelectorAll('.report-card');
+            const pdfHeader = document.getElementById('pdfHeaderTemplate');
+            
+            // Записываем актуальные даты в заголовок документа
+            const fromDate = document.getElementById('dateFrom').value || 'начало';
+            const toDate = document.getElementById('dateTo').value || 'сегодня';
+            document.getElementById('pdfPeriodText').innerText = `Период отчёта: с ${fromDate} по ${toDate} | Создан: ${new Date().toLocaleDateString()}`;
+
+            // Корректируем отображение карточек под выбранную категорию и переводим в PDF-структуру
+            cards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Включаем печатную верстку и заголовок
+            element.classList.add('pdf-layout');
+            pdfHeader.style.display = 'block';
+
+            const opt = {
+                margin:       [12, 12, 12, 12],
+                filename:     `Zerno_${category}_отчёт_${new Date().toISOString().slice(0,10)}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                pagebreak:    { mode: ['avoid-all', 'css'] }, // Умный перенос страниц без разрывов блоков
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Формируем файл, а затем возвращаем исходный вид экрана назад
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.remove('pdf-layout');
+                pdfHeader.style.display = 'none';
+                cards.forEach(card => card.style.display = 'flex');
+            }).catch(err => {
+                console.error("Ошибка генерации PDF:", err);
+                element.classList.remove('pdf-layout');
+                pdfHeader.style.display = 'none';
+                cards.forEach(card => card.style.display = 'flex');
+            });
+        }
+
+        function setDefaultDates() {
+            const to = new Date();
+            const from = new Date();
+            from.setDate(from.getDate() - 30);
+            document.getElementById('dateTo').value = to.toISOString().slice(0,10);
+            document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
+        }
+
+        window.onload = () => {
+            if (!token) window.location.href = '/employee/login.html';
+            setDefaultDates();
+            loadAllReports();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerno — Управление сотрудниками</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f0e8;
+            color: #2c1810;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Соответствие стилю index.html */
+        .header {
+            background: #2c1810;
+            color: #e8d5b5;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .back-btn {
+            background: #e8d5b5;
+            color: #2c1810;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s;
+        }
+        .back-btn:hover {
+            background: #2c1810;
+            color: #e8d5b5;
+            border: 1px solid #e8d5b5;
+        }
+
+        /* Форма добавления сотрудника */
+        .form-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #e0d0c0;
+        }
+        .form-panel h2 {
+            color: #2c1810;
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f5f0e8;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #7a7065;
+            font-size: 13px;
+        }
+        .form-group input, .form-group select {
+            padding: 10px;
+            border: 2px solid #e0d0c0;
+            border-radius: 12px;
+            font-family: inherit;
+            color: #2c1810;
+            outline: none;
+        }
+        
+        /* Кнопки */
+        .btn-primary {
+            background: #2c1810;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-primary:hover {
+            background: #4a3319;
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* Список сотрудников */
+        .section-title {
+            color: #2c1810;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .employees-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .employee-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #e0d0c0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .employee-info h3 {
+            color: #2c1810;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        .employee-info p {
+            color: #7a5a4a;
+            font-size: 14px;
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .employee-info span.label-text {
+            color: #7a7065;
+            font-weight: 500;
+        }
+        
+        /* Бейджи ролей */
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .role-admin {
+            background: #2c1810;
+            color: #e8d5b5;
+        }
+        .role-employee {
+            background: #e0d0c0;
+            color: #2c1810;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        .btn-delete:active {
+            transform: scale(0.98);
+        }
+        .disabled-text {
+            color: #7a7065;
+            font-size: 13px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Управление сотрудниками</h2>
+        <a href="index.html" class="back-btn">← На главную</a>
+    </div>
+
+    <div class="container">
+        <div class="form-panel">
+            <h2>Добавить нового сотрудника</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>ФИО</label>
+                    <input type="text" id="empFullname" placeholder="Иванов Иван Иванович">
+                </div>
+                <div class="form-group">
+                    <label>Телефон *</label>
+                    <input type="text" id="empPhone" placeholder="+375291112233">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="empEmail" placeholder="employee@zerno.by">
+                </div>
+                <div class="form-group">
+                    <label>Роль</label>
+                    <select id="empRole">
+                        <option value="employee">Сотрудник</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Пароль (по умолчанию: 1234567)</label>
+                    <input type="text" id="empPassword" placeholder="Оставьте пустым для стандартного">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addEmployee()">Добавить сотрудника</button>
+        </div>
+
+        <h2 class="section-title">Список сотрудников</h2>
+        <div id="employeesList" class="employees-grid">
+            <div style="text-align:center; padding:40px; color: #7a7065;">Загрузка...</div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let token = localStorage.getItem('token');
+
+        async function loadEmployees() {
+            try {
+                const res = await fetch(API + '/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        alert('Доступ запрещён. Требуются права администратора.');
+                        window.location.href = '/employee/login.html';
+                    }
+                    return;
+                }
+                
+                const users = await res.json();
+                const employees = users.filter(u => u.role === 'employee' || u.role === 'admin');
+                
+                const container = document.getElementById('employeesList');
+                if (employees.length === 0) {
+                    container.innerHTML = '<p style="text-align:center;padding:40px;color:#7a7065;">Нет сотрудников</p>';
+                    return;
+                }
+                
+                container.innerHTML = employees.map(emp => `
+                    <div class="employee-card">
+                        <div class="employee-info">
+                            <h3>${emp.fullname || 'Без имени'}</h3>
+                            <p><span class="label-text">Тел:</span> ${emp.phone || '—'}</p>
+                            <p><span class="label-text">Email:</span> ${emp.email || '—'}</p>
+                            <p>
+                                <span class="role-badge ${emp.role === 'admin' ? 'role-admin' : 'role-employee'}">
+                                    ${emp.role === 'admin' ? 'Администратор' : 'Сотрудник'}
+                                </span>
+                            </p>
+                            <p style="font-size: 11px; color: #7a7065; margin-top: 8px;">ID: ${emp.id}</p>
+                        </div>
+                        ${emp.role !== 'admin' ? `
+                            <button class="btn-delete" onclick="deleteEmployee(${emp.id})">Удалить</button>
+                        ` : '<span class="disabled-text">Нельзя удалить главного админа</span>'}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                document.getElementById('employeesList').innerHTML = '<p style="text-align:center;padding:40px;color:#dc3545;">Ошибка загрузки сотрудников</p>';
+            }
+        }
+
+        async function addEmployee() {
+            const fullname = document.getElementById('empFullname').value;
+            const phone = document.getElementById('empPhone').value;
+            const email = document.getElementById('empEmail').value;
+            const role = document.getElementById('empRole').value;
+            let password = document.getElementById('empPassword').value;
+            
+            if (!phone) {
+                alert('Введите телефон сотрудника');
+                return;
+            }
+            
+            if (!password) {
+                password = '1234567';
+            }
+            
+            if (password.length < 7) {
+                alert('Пароль должен быть не менее 7 символов');
+                return;
+            }
+            
+            try {
+                const res = await fetch(API + '/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ fullname, phone, email, role, password })
+                });
+                
+                if (res.ok) {
+                    alert('Сотрудник добавлен!');
+                    document.getElementById('empFullname').value = '';
+                    document.getElementById('empPhone').value = '';
+                    document.getElementById('empEmail').value = '';
+                    document.getElementById('empPassword').value = '';
+                    loadEmployees();
+                } else {
+                    const error = await res.json();
+                    alert('Ошибка: ' + error.error);
+                }
+            } catch (error) {
+                alert('Ошибка соединения');
+            }
+        }
+
+        async function deleteEmployee(id) {
+            if (confirm('Удалить сотрудника?')) {
+                try {
+                    const res = await fetch(API + `/admin/users/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (res.ok) {
+                        alert('Сотрудник удалён');
+                        loadEmployees();
+                    } else {
+                        alert('Ошибка удаления');
+                    }
+                } catch (error) {
+                    alert('Ошибка соединения');
+                }
+            }
+        }
+
+        window.onload = () => {
+            token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/employee/login.html';
+                return;
+            }
+            loadEmployees();
+        };
+    </script>
+</body>
+</html>
