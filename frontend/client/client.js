@@ -28,7 +28,7 @@ const API = 'http://localhost:3000/api';
             setRegisterStep(1);
             ['regName', 'regEmail', 'regCode', 'regPass', 'regPass2'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.value = ';
+                if (el) el.value = '';
             });
         }
 
@@ -102,8 +102,8 @@ const API = 'http://localhost:3000/api';
             document.getElementById('catalog').style.display = 'block';
             const catMax = document.getElementById('catMaxPrice');
             const catSort = document.getElementById('catSort');
-            if (catMax) catMax.value = ';
-            if (catSort) catSort.value = ';
+            if (catMax) catMax.value = '';
+            if (catSort) catSort.value = '';
             scrollToCatalog();
         }
 
@@ -206,7 +206,7 @@ const API = 'http://localhost:3000/api';
             showCategoryProducts(categoryId, categoryName);
             setTimeout(() => showProductDetails(item), 300);
             document.getElementById('searchResults').classList.remove('show');
-            document.getElementById('searchInput').value = ';
+            document.getElementById('searchInput').value = '';
         }
 
         // ====== ВАЛИДАЦИЯ ======
@@ -477,7 +477,7 @@ const API = 'http://localhost:3000/api';
                 showSuccess('Пароль обновлён');
                 closeModal('forgotModal');
                 document.getElementById('loginEmail').value = email;
-                document.getElementById('loginPass').value = ';
+                document.getElementById('loginPass').value = '';
                 showLoginModal();
             } else alert(data.error || 'Ошибка');
         }
