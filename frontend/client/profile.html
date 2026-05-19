@@ -23,11 +23,15 @@
         .form-group label { font-weight: 600; font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
         .form-group input {
             width: 100%; padding: 12px; border: 2px solid var(--border);
-            border-radius: 12px; font-family: inherit;
+            border-radius: 12px; font-family: inherit; box-sizing: border-box;
         }
         .btn-primary {
             background: var(--primary); color: #f5e6d3; border: none;
             padding: 12px 28px; border-radius: 30px; cursor: pointer; font-weight: 600;
+        }
+        .btn-outline {
+            background: transparent; border: 2px solid var(--border);
+            color: var(--primary); padding: 10px 24px; border-radius: 30px; cursor: pointer;
         }
         .section-title { font-family: Georgia, serif; font-size: 22px; margin: 24px 0 12px; }
         .order-card {
@@ -46,6 +50,9 @@
             background: white; cursor: pointer; font-weight: 500;
         }
         .tab.active { background: var(--primary); color: #f5e6d3; border-color: var(--primary); }
+        .password-panel { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .password-panel.hidden { display: none; }
+        .hint { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -68,9 +75,22 @@
                 <div class="form-group"><label>ФИО</label><input id="editFullname"></div>
                 <div class="form-group"><label>Email</label><input id="editEmail" type="email"></div>
                 <div class="form-group"><label>Телефон</label><input id="editPhone"></div>
-                <div class="form-group"><label>Новый пароль</label><input id="editPassword" type="password" placeholder="Оставьте пустым, если не менять"></div>
             </div>
-            <button class="btn-primary" style="margin-top:20px;" onclick="saveProfile()">Сохранить</button>
+            <button class="btn-primary" style="margin-top:20px;" onclick="saveProfile()">Сохранить данные</button>
+
+            <div class="password-panel" id="passwordPanel">
+                <h3 class="section-title" style="margin-top:0;">Смена пароля</h3>
+                <p class="hint">На ваш email придёт код подтверждения</p>
+                <div id="pwdStep1">
+                    <button class="btn-outline" type="button" onclick="sendChangePasswordCode()">Отправить код на email</button>
+                </div>
+                <div id="pwdStep2" class="hidden">
+                    <div class="form-group" style="margin-top:16px;"><label>Код из письма</label><input id="pwdCode" maxlength="6" inputmode="numeric"></div>
+                    <div class="form-group"><label>Новый пароль</label><input id="pwdNew" type="password"></div>
+                    <div class="form-group"><label>Подтверждение</label><input id="pwdNew2" type="password"></div>
+                    <button class="btn-primary" style="margin-top:12px;" onclick="confirmChangePassword()">Изменить пароль</button>
+                </div>
+            </div>
         </div>
 
         <h3 class="section-title">Заказы</h3>
@@ -95,6 +115,7 @@
             });
             if (!res.ok) { logout(); return; }
             const user = await res.json();
+            if (user.role !== 'client') { logout(); return; }
             document.getElementById('displayName').textContent = user.fullname || 'Гость';
             document.getElementById('displayEmail').textContent = user.email || user.phone || '';
             document.getElementById('avatarLetter').textContent = (user.fullname || 'Г')[0].toUpperCase();
@@ -159,16 +180,54 @@
             const body = {
                 fullname: document.getElementById('editFullname').value,
                 email: document.getElementById('editEmail').value,
-                phone: getPhoneForSubmit('editPhone'),
-                password: document.getElementById('editPassword').value
+                phone: getPhoneForSubmit('editPhone')
             };
             const res = await fetch(API + '/user/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
                 body: JSON.stringify(body)
             });
-            if (res.ok) { alert('Сохранено'); loadProfile(); document.getElementById('editPassword').value = ''; }
-            else alert('Ошибка сохранения');
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) { alert('Сохранено'); loadProfile(); }
+            else alert(data.error || 'Ошибка сохранения');
+        }
+
+        async function sendChangePasswordCode() {
+            const res = await fetch(API + '/auth/change-password/send-code', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('pwdStep2').classList.remove('hidden');
+                alert(data.message || 'Код отправлен');
+            } else alert(data.error || 'Ошибка');
+        }
+
+        function validatePwd(pass) {
+            return pass.length >= 7 && /[A-Z]/.test(pass) && /[0-9]/.test(pass) && /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+        }
+
+        async function confirmChangePassword() {
+            const code = document.getElementById('pwdCode').value.trim();
+            const p1 = document.getElementById('pwdNew').value;
+            const p2 = document.getElementById('pwdNew2').value;
+            if (!code) return alert('Введите код');
+            if (!validatePwd(p1)) return alert('Пароль не соответствует требованиям');
+            if (p1 !== p2) return alert('Пароли не совпадают');
+            const res = await fetch(API + '/auth/change-password/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ code, password: p1 })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert('Пароль изменён');
+                document.getElementById('pwdCode').value = '';
+                document.getElementById('pwdNew').value = '';
+                document.getElementById('pwdNew2').value = '';
+                document.getElementById('pwdStep2').classList.add('hidden');
+            } else alert(data.error || 'Ошибка');
         }
 
         function logout() {

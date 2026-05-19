@@ -936,6 +936,36 @@
             border-bottom-color: #2d2418;
         }
 
+        .auth-steps {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 12px 0 20px;
+        }
+        .auth-step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e0d0c0;
+        }
+        .auth-step-dot.active { background: #2d2418; }
+        .auth-hint {
+            font-size: 14px;
+            color: #7a5a4a;
+            margin-bottom: 16px;
+        }
+        .btn-text-link {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            background: none;
+            border: none;
+            color: #5a3725;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: underline;
+        }
+
         .modal-divider {
             display: flex;
             align-items: center;

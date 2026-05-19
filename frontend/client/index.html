@@ -168,45 +168,24 @@
                 <span class="material-symbols-rounded">close</span>
             </button>
             <h3 class="modal-title">Создать аккаунт</h3>
-            <p class="modal-subtitle">Присоединяйтесь к Zerno</p>
+            <p class="modal-subtitle" id="regStepSubtitle">Шаг 1 из 3 — ваши данные</p>
+                        <div class="auth-steps"><span class="auth-step-dot active" data-step="1"></span><span class="auth-step-dot" data-step="2"></span><span class="auth-step-dot" data-step="3"></span></div>
             
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="regEmail" placeholder="your@email.com" onblur="validateEmail('regEmail')">
-                <div class="error-message" id="regEmailError">Введите корректный email</div>
-            </div>
+            <div id="regStep1" class="auth-step-panel"><div class="form-group"><label>ФИО</label><input type="text" id="regName" placeholder="Иванов Иван Иванович"></div>
+                <div class="form-group"><label>Телефон</label><input type="tel" id="regPhone" placeholder="+375_________" autocomplete="tel"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com" onblur="validateEmail('regEmail')"><div class="error-message" id="regEmailError">Введите корректный email</div></div>
+                <button class="btn-primary btn-full" onclick="registerSendCode()">Получить код на email</button></div>
             
-            <div class="form-group">
-                <label>Телефон</label>
-                <input type="tel" id="regPhone" placeholder="+375_________" autocomplete="tel">
-            </div>
+            <div id="regStep2" class="auth-step-panel" style="display:none;"><p class="auth-hint">Код отправлен на <strong id="regEmailDisplay"></strong></p>
+                <div class="form-group"><label>Код из письма</label><input type="text" id="regCode" placeholder="6 цифр" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
+                <button class="btn-primary btn-full" onclick="registerVerifyCode()">Подтвердить код</button>
+                <button type="button" class="btn-text-link" onclick="registerSendCode(true)">Отправить код снова</button>
+                <button type="button" class="btn-text-link" onclick="setRegisterStep(1)">← Изменить данные</button></div>
             
-            <div class="form-group">
-                <label>ФИО</label>
-                <input type="text" id="regName" placeholder="Иванов Иван Иванович">
-            </div>
-            
-            <div class="form-group">
-                <label>Пароль</label>
-                <div class="password-wrapper">
-                    <input type="password" id="regPass" placeholder="Минимум 7 символов" oninput="checkPasswordStrength('regPass')">
-                    <button type="button" class="toggle-password" onclick="togglePassword('regPass', this)">Показать</button>
-                </div>
-                <div class="password-hint" id="passHint">
-                    Минимум 7 символов, заглавная буква, цифра и спецсимвол
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Подтверждение пароля</label>
-                <div class="password-wrapper">
-                    <input type="password" id="regPass2" placeholder="Повторите пароль">
-                    <button type="button" class="toggle-password" onclick="togglePassword('regPass2', this)">Показать</button>
-                </div>
-                <div class="error-message" id="regPass2Error">Пароли не совпадают</div>
-            </div>
-            
-            <button class="btn-primary btn-full" onclick="register()">Зарегистрироваться</button>
+            <div id="regStep3" class="auth-step-panel" style="display:none;"><p class="auth-hint">Придумайте пароль для входа</p>
+                <div class="form-group"><label>Пароль</label><div class="password-wrapper"><input type="password" id="regPass" placeholder="Минимум 7 символов" oninput="checkPasswordStrength('regPass')"><button type="button" class="toggle-password" onclick="togglePassword('regPass', this)">Показать</button></div><div class="password-hint" id="passHint">Минимум 7 символов, заглавная буква, цифра и спецсимвол</div></div>
+                <div class="form-group"><label>Подтверждение пароля</label><div class="password-wrapper"><input type="password" id="regPass2" placeholder="Повторите пароль"><button type="button" class="toggle-password" onclick="togglePassword('regPass2', this)">Показать</button></div><div class="error-message" id="regPass2Error">Пароли не совпадают</div></div>
+                <button class="btn-primary btn-full" onclick="registerComplete()">Завершить регистрацию</button></div>
             
             <div class="modal-divider">или</div>
             
@@ -223,11 +202,12 @@
                 <span class="material-symbols-rounded">close</span>
             </button>
             <h3 class="modal-title">Добро пожаловать</h3>
-            <p class="modal-subtitle">Войдите в свой аккаунт</p>
+            <p class="modal-subtitle">Войдите по email и паролю</p>
             
             <div class="form-group">
-                <label>Email или телефон</label>
-                <input type="text" id="loginId" placeholder="your@email.com или +375...">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com" onblur="validateEmail('loginEmail')">
+                <div class="error-message" id="loginEmailError">Введите корректный email</div>
             </div>
             
             <div class="form-group">
@@ -239,7 +219,7 @@
             </div>
             
             <button class="btn-primary btn-full" onclick="login()">Войти</button>
-            
+            <p class="modal-footer" style="margin-top:12px;"><span class="modal-link" onclick="showForgotPasswordModal()">Забыли пароль?</span></p>
             <div class="modal-divider">или</div>
             
             <div class="modal-footer">
@@ -248,18 +228,20 @@
         </div>
     </div>
 
+<div id="forgotModal" class="modal">
+    <div class="modal-content">
+    <button type="button" class="modal-close" onclick="closeModal('forgotModal')"><span class="material-symbols-rounded">close</span></button>
+    <h3 class="modal-title">Восстановление пароля</h3>
+    <div id="forgotStep1"><p class="modal-subtitle">Введите email</p><div class="form-group"><label>Email</label><input type="email" id="forgotEmail"></div><button class="btn-primary btn-full" onclick="forgotSendCode()">Отправить код</button></div>
+    <div id="forgotStep2" style="display:none;"><p class="auth-hint">Код на <strong id="forgotEmailDisplay"></strong></p><div class="form-group"><label>Код</label><input id="forgotCode" maxlength="6"></div><div class="form-group"><label>Новый пароль</label><input type="password" id="forgotPass"></div><div class="form-group"><label>Подтверждение</label><input type="password" id="forgotPass2"></div><button class="btn-primary btn-full" onclick="forgotReset()">Сохранить</button></div>
+    <button type="button" class="btn-text-link" onclick="closeModal('forgotModal');showLoginModal();">← К входу</button>
+    </div></div>
     <div id="editProfileModal" class="modal">
         <div class="modal-content">
             <h3 class="modal-title">Редактировать профиль</h3>
             <div class="form-group"><label>ФИО</label><input type="text" id="editFullname"></div>
             <div class="form-group"><label>Email</label><input type="email" id="editEmail"></div>
             <div class="form-group"><label>Телефон</label><input type="text" id="editPhone"></div>
-            <div class="form-group">
-                <label>Новый пароль (оставьте пустым, если не менять)</label>
-                <div class="password-wrapper">
-                    <input type="password" id="editPassword">
-                    <button type="button" class="toggle-password" onclick="togglePassword('editPassword', this)">Показать</button>
-                </div>
             </div>
             <button class="btn-primary btn-full" onclick="updateProfile()">Сохранить</button>
             <button class="btn-outline btn-full" onclick="closeModal('editProfileModal')" style="margin-top:10px;">Отмена</button>

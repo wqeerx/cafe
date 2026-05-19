@@ -18,7 +18,52 @@ const API = 'http://localhost:3000/api';
         
         function showRegisterModal() { 
             closeModal('loginModal');
+            closeModal('forgotModal');
+            resetRegisterForm();
+            setupPhoneInput('regPhone');
             document.getElementById('registerModal').style.display = 'flex'; 
+        }
+
+        function resetRegisterForm() {
+            setRegisterStep(1);
+            ['regName', 'regEmail', 'regCode', 'regPass', 'regPass2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = ';
+            });
+        }
+
+        function setRegisterStep(n) {
+            [1, 2, 3].forEach(i => {
+                const panel = document.getElementById('regStep' + i);
+                if (panel) panel.style.display = i === n ? 'block' : 'none';
+                document.querySelectorAll('.auth-step-dot[data-step="' + i + '"]').forEach(d => {
+                    d.classList.toggle('active', i <= n);
+                });
+            });
+            const subtitles = {
+                1: 'Шаг 1 из 3 — ваши данные',
+                2: 'Шаг 2 из 3 — код из письма',
+                3: 'Шаг 3 из 3 — пароль'
+            };
+            const sub = document.getElementById('regStepSubtitle');
+            if (sub) sub.innerText = subtitles[n] || '';
+        }
+
+        function showForgotPasswordModal() {
+            closeModal('loginModal');
+            document.getElementById('forgotStep1').style.display = 'block';
+            document.getElementById('forgotStep2').style.display = 'none';
+            document.getElementById('forgotEmail').value = document.getElementById('loginEmail')?.value || '';
+            document.getElementById('forgotModal').style.display = 'flex';
+        }
+
+        async function parseApiError(res) {
+            try {
+                const d = await res.json();
+                return d.error || 'Ошибка';
+            } catch (_) {
+                return 'Ошибка';
+            }
         }
         
         function closeModal(id) { 
@@ -57,8 +102,8 @@ const API = 'http://localhost:3000/api';
             document.getElementById('catalog').style.display = 'block';
             const catMax = document.getElementById('catMaxPrice');
             const catSort = document.getElementById('catSort');
-            if (catMax) catMax.value = '';
-            if (catSort) catSort.value = '';
+            if (catMax) catMax.value = ';
+            if (catSort) catSort.value = ';
             scrollToCatalog();
         }
 
@@ -161,7 +206,7 @@ const API = 'http://localhost:3000/api';
             showCategoryProducts(categoryId, categoryName);
             setTimeout(() => showProductDetails(item), 300);
             document.getElementById('searchResults').classList.remove('show');
-            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInput').value = ';
         }
 
         // ====== ВАЛИДАЦИЯ ======
@@ -316,64 +361,125 @@ const API = 'http://localhost:3000/api';
             saveCart(); window.location.href = 'checkout.html';
         }
 
-                // Авторизация и профиль
-        async function register() {
-            let email = document.getElementById('regEmail').value, 
-                phone = getPhoneForSubmit('regPhone'), 
-                name = document.getElementById('regName').value, 
-                p1 = document.getElementById('regPass').value, 
-                p2 = document.getElementById('regPass2').value;
-            
-            // Валидация
-            if (!email || !phone || !p1 || !name) return alert('Заполните все поля');
-            if (phone.replace(/\D/g, '').length < 12) return alert('Введите номер полностью: +375 и 9 цифр');
+        // Авторизация и профиль
+        async function registerSendCode(isResend) {
+            const email = document.getElementById('regEmail').value.trim();
+            const phone = getPhoneForSubmit('regPhone');
+            const fullname = document.getElementById('regName').value.trim();
+            if (!fullname || !phone || !email) return alert('Заполните все поля');
             if (!validateEmail('regEmail')) return alert('Введите корректный email');
+            const res = await fetch(API + '/auth/register/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, phone, fullname })
+            });
+            if (res.ok) {
+                document.getElementById('regEmailDisplay').innerText = email;
+                setRegisterStep(2);
+                showSuccess(isResend ? 'Код отправлен повторно' : 'Код отправлен на email');
+            } else alert(await parseApiError(res));
+        }
+
+        async function registerVerifyCode() {
+            const email = document.getElementById('regEmail').value.trim();
+            const code = document.getElementById('regCode').value.trim();
+            if (!code || code.length < 6) return alert('Введите 6-значный код');
+            const res = await fetch(API + '/auth/register/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code })
+            });
+            if (res.ok) setRegisterStep(3);
+            else alert(await parseApiError(res));
+        }
+
+        async function registerComplete() {
+            const email = document.getElementById('regEmail').value.trim();
+            const code = document.getElementById('regCode').value.trim();
+            const p1 = document.getElementById('regPass').value;
+            const p2 = document.getElementById('regPass2').value;
             if (!validatePassword(p1)) return alert('Пароль не соответствует требованиям');
             if (p1 !== p2) {
-                document.getElementById('regPass2').classList.add('error');
                 document.getElementById('regPass2Error').classList.add('show');
                 return alert('Пароли не совпадают');
             }
-            
-            let res = await fetch(API + '/register', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ email, phone, fullname: name, password: p1 }) 
+            const res = await fetch(API + '/auth/register/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code, password: p1 })
             });
-            
-            if (res.ok) { 
-                showSuccess('Регистрация успешна! Входим...');
+            const data = await res.json();
+            if (res.ok) {
+                applyLoggedIn(data);
                 closeModal('registerModal');
-                // Автоматический вход после регистрации
-                document.getElementById('loginId').value = email;
-                document.getElementById('loginPass').value = p1;
-                setTimeout(() => login(), 500);
-            }
-            else alert('Ошибка регистрации');
+                showSuccess('Добро пожаловать, ' + (data.user.fullname || 'друг') + '!');
+            } else alert(data.error || 'Ошибка регистрации');
         }
 
         async function login() {
-            let id = document.getElementById('loginId').value, 
-                pass = document.getElementById('loginPass').value;
-            let isEmail = id.includes('@');
-            let body = isEmail ? { email: id, password: pass } : { phone: id, password: pass };
-            let res = await fetch(API + '/login', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(body) 
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            if (!email || !pass) return alert('Введите email и пароль');
+            if (!validateEmail('loginEmail')) return alert('Введите корректный email');
+            const res = await fetch(API + '/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass })
             });
-            let data = await res.json();
+            const data = await res.json();
             if (res.ok) {
-                localStorage.setItem('token', data.token);
-                currentUser = data.user;
-                document.getElementById('authButtons').style.display = 'none';
-                document.getElementById('profileSection').style.display = 'block';
-                document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
-                document.getElementById('profileEmail').innerText = currentUser.email;
+                applyLoggedIn(data);
                 closeModal('loginModal');
-                showSuccess('Добро пожаловать, ' + (currentUser.fullname || 'друг') + '!');
-                updateCart();
-            } else alert('Ошибка: ' + data.error);
+                showSuccess('Добро пожаловать, ' + (data.user.fullname || 'друг') + '!');
+            } else alert('Ошибка: ' + (data.error || 'Вход не выполнен'));
+        }
+
+        function applyLoggedIn(data) {
+            localStorage.setItem('token', data.token);
+            currentUser = data.user;
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('profileSection').style.display = 'block';
+            document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
+            document.getElementById('profileEmail').innerText = currentUser.email;
+            updateCart();
+        }
+
+        async function forgotSendCode() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email) return alert('Введите email');
+            const res = await fetch(API + '/auth/forgot-password/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            if (res.ok) {
+                document.getElementById('forgotEmailDisplay').innerText = email;
+                document.getElementById('forgotStep1').style.display = 'none';
+                document.getElementById('forgotStep2').style.display = 'block';
+                showSuccess('Если аккаунт существует, код отправлен');
+            } else alert(await parseApiError(res));
+        }
+
+        async function forgotReset() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            const code = document.getElementById('forgotCode').value.trim();
+            const p1 = document.getElementById('forgotPass').value;
+            const p2 = document.getElementById('forgotPass2').value;
+            if (!validatePassword(p1)) return alert('Пароль не соответствует требованиям');
+            if (p1 !== p2) return alert('Пароли не совпадают');
+            const res = await fetch(API + '/auth/forgot-password/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code, password: p1 })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showSuccess('Пароль обновлён');
+                closeModal('forgotModal');
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPass').value = ';
+                showLoginModal();
+            } else alert(data.error || 'Ошибка');
         }
 
         function showEditProfileModal() {
@@ -388,8 +494,7 @@ const API = 'http://localhost:3000/api';
             let data = { 
                 fullname: document.getElementById('editFullname').value, 
                 email: document.getElementById('editEmail').value, 
-                phone: getPhoneForSubmit('editPhone'), 
-                password: document.getElementById('editPassword').value 
+                phone: getPhoneForSubmit('editPhone')
             };
             let res = await fetch(API + '/user/profile', { 
                 method: 'PUT', 
@@ -611,12 +716,12 @@ const API = 'http://localhost:3000/api';
             const img = item.image_url
                 ? '<img src="' + item.image_url + '" alt="' + item.name + '" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;">'
                 : '<div style="text-align:center;padding:32px;background:#f5e6d3;border-radius:12px;"><span class="material-symbols-rounded" style="font-size:48px;color:#8a6a5a">coffee</span></div>';
-            content.innerHTML = img.replace(/motion./g, '') +
-                '<div style="font-size:22px;font-weight:bold;margin-top:12px;">' + item.price.toFixed(2) + ' BYN</div>'.replace(/motion./g, '') +
+            content.innerHTML = img +
+                '<div style="font-size:22px;font-weight:bold;margin-top:12px;">' + item.price.toFixed(2) + ' BYN</div>' +
                 (item.description ? '<p style="margin-top:12px;font-size:14px;">' + item.description + '</p>' : '') +
-                (item.composition ? '<div style="background:#fef8f0;padding:12px;border-radius:10px;margin-top:10px;"><strong>Состав</strong><br>' + item.composition + '</div>'.replace(/motion./g, '') : '') +
+                (item.composition ? '<div style="background:#fef8f0;padding:12px;border-radius:10px;margin-top:10px;"><strong>Состав</strong><br>' + item.composition + '</div>' : '') +
                 '<div style="background:#fef8f0;padding:12px;border-radius:10px;margin-top:10px;"><strong>КБЖУ</strong><br>' +
-                (item.calories || 0) + ' ккал · Б ' + (item.protein || 0) + ' · Ж ' + (item.fat || 0) + ' · У ' + (item.carbs || 0) + '</div>'.replace(/motion./g, '');
+                (item.calories || 0) + ' ккал · Б ' + (item.protein || 0) + ' · Ж ' + (item.fat || 0) + ' · У ' + (item.carbs || 0) + '</div>';
             const addBtn = document.getElementById('productModalAddBtn');
             if (addBtn) {
                 addBtn.innerHTML = '<span class="material-symbols-rounded icon-sm">add_shopping_cart</span> В корзину';

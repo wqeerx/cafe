@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -111,6 +113,19 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Коды подтверждения email
+  db.run(`CREATE TABLE IF NOT EXISTS email_verifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    payload TEXT,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_email_verifications_lookup
+    ON email_verifications(email, purpose)`);
+
   // Добавляем тестовые данные
   db.get(`SELECT COUNT(*) as cnt FROM users WHERE role = 'admin'`, (err, row) => {
   if (err) return;
@@ -213,51 +228,15 @@ app.put('/api/employee/bookings/:id/complete', authenticateEmployee, (req, res) 
   });
 });
 
-// ============ АВТОРИЗАЦИЯ ============
-app.post('/api/register', async (req, res) => {
-  const { phone, email, fullname, password } = req.body;
-  
-  if (!phone || !password) {
-    return res.status(400).json({ error: 'Телефон и пароль обязательны' });
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    db.run(`INSERT INTO users (phone, email, fullname, password, role) VALUES (?, ?, ?, ?, 'client')`,
-      [phone, email || null, fullname || null, hashedPassword],
-      function(err) {
-        if (err) {
-          if (err.message.includes('UNIQUE')) {
-            return res.status(400).json({ error: 'Пользователь с таким телефоном уже существует' });
-          }
-          return res.status(500).json({ error: err.message });
-        }
-        res.json({ id: this.lastID, message: 'Регистрация успешна' });
-      });
-  } catch (error) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-// Логин (поддерживает и телефон, и email)
+// ============ АВТОРИЗАЦИЯ (сотрудники / админ — по телефону) ============
 app.post('/api/login', (req, res) => {
-  const { phone, email, password } = req.body;
-  
-  let query = '';
-  let param = '';
-  
-  if (phone) {
-    query = 'SELECT * FROM users WHERE phone = ?';
-    param = phone;
-  } else if (email) {
-    query = 'SELECT * FROM users WHERE email = ?';
-    param = email;
-  } else {
-    return res.status(400).json({ error: 'Укажите телефон или email' });
+  const { phone, password } = req.body;
+
+  if (!phone || !password) {
+    return res.status(400).json({ error: 'Укажите телефон и пароль' });
   }
-  
-  db.get(query, [param], async (err, user) => {
+
+  db.get('SELECT * FROM users WHERE phone = ?', [phone], async (err, user) => {
     if (err || !user) {
       return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
@@ -298,23 +277,32 @@ app.get('/api/user/profile', authenticateToken, (req, res) => {
   });
 });
 
-// Обновить профиль пользователя
-app.put('/api/user/profile', authenticateToken, async (req, res) => {
-  const { fullname, email, phone, password } = req.body;
-  let query = `UPDATE users SET fullname = ?, email = ?, phone = ?`;
-  let params = [fullname, email, phone];
-  
-  if (password && password.length >= 7) {
-    const hash = await bcrypt.hash(password, 10);
-    query += `, password = ?`;
-    params.push(hash);
+// Обновить профиль (без пароля — пароль меняется через /api/auth/change-password)
+app.put('/api/user/profile', authenticateToken, (req, res) => {
+  const { fullname, email, phone } = req.body;
+  const normEmail = email ? String(email).trim().toLowerCase() : null;
+
+  if (phone && !validatePhone(phone)) {
+    return res.status(400).json({ error: 'Телефон: формат +375 и 9 цифр' });
   }
-  query += ` WHERE id = ?`;
-  params.push(req.user.id);
-  
-  db.run(query, params, (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'Профиль обновлён' });
+
+  db.get(`SELECT role FROM users WHERE id = ?`, [req.user.id], (err, self) => {
+    if (err || !self) return res.status(500).json({ error: 'Ошибка' });
+
+    db.run(
+      `UPDATE users SET fullname = ?, email = ?, phone = ? WHERE id = ?`,
+      [fullname, normEmail, phone, req.user.id],
+      function (runErr) {
+        if (runErr) {
+          if (runErr.message.includes('UNIQUE')) {
+            return res.status(400).json({ error: 'Email или телефон уже заняты' });
+          }
+          return res.status(500).json({ error: runErr.message });
+        }
+        logAction(req.user.id, 'Обновление профиля');
+        res.json({ message: 'Профиль обновлён' });
+      }
+    );
   });
 });
 // ============ МЕНЮ ============
@@ -615,6 +603,17 @@ function authenticateAdmin(req, res, next) {
   });
 }
 
+// Email-авторизация для клиентов
+require('./auth-email')(app, db, {
+  bcrypt,
+  jwt,
+  SECRET,
+  validatePassword,
+  validatePhone,
+  logAction,
+  authenticateToken
+});
+
 // Дополнительные маршруты
 require('./api-extensions')(app, db, bcrypt, {
   authenticateToken,
@@ -627,8 +626,10 @@ require('./api-extensions')(app, db, bcrypt, {
 
 // Запуск сервера
 app.listen(PORT, () => {
+  const mailOk = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   console.log(`\n✅ Сервер Zerno запущен!`);
   console.log(`📍 Адрес: http://localhost:${PORT}`);
+  console.log(`📧 Почта: ${mailOk ? process.env.SMTP_USER : 'не настроена (.env) — коды в консоли'}`);
   console.log(`👑 Админ: +375291234567 / admin123`);
   console.log(`👨‍🍳 Сотрудник: +375291112233 / employee123`);
   console.log(`📱 Клиент: http://localhost:${PORT}/client/index.html\n`);
