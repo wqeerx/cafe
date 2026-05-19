@@ -6,6 +6,7 @@
     <title>Zerno — Профиль</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
     <script src="../shared/zerno-utils.js"></script>
+    <script src="../shared/zerno-dialog.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
         .container { max-width: 900px; margin: 30px auto; padding: 0 20px 60px; }
@@ -111,12 +112,8 @@
 
         function getToken() { return localStorage.getItem('token'); }
 
-        function showProfileToast(message) {
-            const t = document.getElementById('profileToast');
-            if (!t) return;
-            t.textContent = message;
-            t.style.display = 'block';
-            setTimeout(() => { t.style.display = 'none'; }, 3500);
+        function showProfileToast(message, type) {
+            if (typeof appNotify === 'function') appNotify(message, type || 'success');
         }
 
         async function loadProfile() {
@@ -177,14 +174,19 @@
         }
 
         async function cancelOrder(id) {
-            if (!confirm('Отменить заказ?')) return;
+            const ok = await showAppConfirm('Отменить этот заказ?', {
+                title: 'Отмена заказа',
+                confirmLabel: 'Отменить',
+                danger: true
+            });
+            if (!ok) return;
             const res = await fetch(API + `/orders/${id}/cancel`, {
                 method: 'PUT',
                 headers: { 'Authorization': 'Bearer ' + getToken() }
             });
             const data = await res.json();
-            if (res.ok) { alert('Заказ отменён'); loadOrders(); }
-            else alert(data.error || 'Ошибка');
+            if (res.ok) { showProfileToast('Заказ отменён'); loadOrders(); }
+            else appNotify(data.error || 'Ошибка', 'error');
         }
 
         async function saveProfile() {
@@ -199,8 +201,8 @@
                 body: JSON.stringify(body)
             });
             const data = await res.json().catch(() => ({}));
-            if (res.ok) { alert('Сохранено'); loadProfile(); }
-            else alert(data.error || 'Ошибка сохранения');
+            if (res.ok) { showProfileToast('Данные сохранены'); loadProfile(); }
+            else appNotify(data.error || 'Ошибка сохранения', 'error');
         }
 
         async function sendChangePasswordCode() {
@@ -218,7 +220,7 @@
                     const hint = document.getElementById('pwdMailHint');
                     if (hint) hint.textContent = data.message || 'Код отправлен на email';
                     showProfileToast(data.devCode ? 'Код: ' + data.devCode : (data.message || 'Код отправлен на email'));
-                } else alert(data.error || 'Ошибка');
+                } else appNotify(data.error || 'Ошибка', 'error');
             } finally {
                 if (btn) { btn.disabled = false; if (btn.dataset.prev) btn.innerText = btn.dataset.prev; }
             }
@@ -232,9 +234,9 @@
             const code = document.getElementById('pwdCode').value.trim();
             const p1 = document.getElementById('pwdNew').value;
             const p2 = document.getElementById('pwdNew2').value;
-            if (!code) return alert('Введите код');
-            if (!validatePwd(p1)) return alert('Пароль не соответствует требованиям');
-            if (p1 !== p2) return alert('Пароли не совпадают');
+            if (!code) return appNotify('Введите код из письма', 'error');
+            if (!validatePwd(p1)) return appNotify('Пароль не соответствует требованиям', 'error');
+            if (p1 !== p2) return appNotify('Пароли не совпадают', 'error');
             const res = await fetch(API + '/auth/change-password/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
@@ -248,7 +250,7 @@
                 document.getElementById('pwdNew2').value = '';
                 document.getElementById('pwdStep1').style.display = 'block';
                 document.getElementById('pwdStep2').classList.add('hidden');
-            } else alert(data.error || 'Ошибка');
+            } else appNotify(data.error || 'Ошибка', 'error');
         }
 
         function logout() {

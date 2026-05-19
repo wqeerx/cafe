@@ -6,6 +6,7 @@
     <title>Zerno — Оформление заказа</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
     <script src="../shared/zerno-utils.js"></script>
+    <script src="../shared/zerno-dialog.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--primary); margin: 0; }
         .container { max-width: 700px; margin: 30px auto; padding: 0 20px 60px; }
@@ -114,7 +115,7 @@
         async function submitOrder() {
             const comment = document.getElementById('orderComment').value;
             if (comment.length > MAX_COMMENT) {
-                alert('Комментарий не более 200 символов');
+                appNotify('Комментарий не более 200 символов', 'error');
                 return;
             }
             const order = {
@@ -136,10 +137,10 @@
             const data = await res.json();
             if (res.ok) {
                 localStorage.removeItem('zerno_cart');
-                alert('Заказ оформлен!');
-                window.location.href = 'profile.html';
+                appNotify('Заказ оформлен!', 'success');
+                setTimeout(() => { window.location.href = 'profile.html'; }, 800);
             } else {
-                alert(data.error || 'Ошибка оформления');
+                appNotify(data.error || 'Ошибка оформления', 'error');
             }
         }
 

@@ -300,10 +300,20 @@ const API = 'http://localhost:3000/api';
         }
         
         function showSuccess(message) {
+            if (typeof appNotify === 'function') {
+                appNotify(message, 'success');
+                return;
+            }
             const toast = document.getElementById('successToast');
-            toast.innerText = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            if (toast) {
+                toast.innerText = message;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+        }
+
+        function notifyError(message) {
+            if (typeof appNotify === 'function') appNotify(message, 'error');
         }
 
         // Корзина
@@ -377,7 +387,7 @@ const API = 'http://localhost:3000/api';
 
         function openCheckout() {
             if (!currentUser) { showLoginModal(); return; }
-            if (cart.length === 0) { alert('Корзина пуста'); return; }
+            if (cart.length === 0) { notifyError('Корзина пуста'); return; }
             saveCart(); window.location.href = 'checkout.html';
         }
 
@@ -387,8 +397,8 @@ const API = 'http://localhost:3000/api';
             const email = document.getElementById('regEmail').value.trim();
             const phone = getPhoneForSubmit('regPhone');
             const fullname = document.getElementById('regName').value.trim();
-            if (!fullname || !phone || !email) return alert('Заполните все поля');
-            if (!validateEmail('regEmail')) return alert('Введите корректный email');
+            if (!fullname || !phone || !email) return notifyError('Заполните все поля');
+            if (!validateEmail('regEmail')) return notifyError('Введите корректный email');
             setAuthLoading(btn, true);
             try {
                 const res = await fetch(API + '/auth/register/send-code', {
@@ -403,7 +413,7 @@ const API = 'http://localhost:3000/api';
                     setRegisterStep(2);
                     if (data.devCode) document.getElementById('regCode').value = data.devCode;
                     showSuccess(handleMailSent(data, 'regCode'));
-                } else alert(data.error || 'Ошибка');
+                } else notifyError(data.error || 'Ошибка');
             } finally {
                 setAuthLoading(btn, false);
             }
@@ -413,7 +423,7 @@ const API = 'http://localhost:3000/api';
             const btn = event?.target?.closest?.('button');
             const email = document.getElementById('regEmail').value.trim();
             const code = document.getElementById('regCode').value.trim();
-            if (!code || code.length < 6) return alert('Введите 6-значный код из письма');
+            if (!code || code.length < 6) return notifyError('Введите 6-значный код из письма');
             setAuthLoading(btn, true);
             try {
                 const res = await fetch(API + '/auth/register/verify-code', {
@@ -424,7 +434,7 @@ const API = 'http://localhost:3000/api';
                 if (res.ok) {
                     setRegisterStep(3);
                     showSuccess('Код подтверждён — придумайте пароль');
-                } else alert(await parseApiError(res));
+                } else notifyError(await parseApiError(res));
             } finally {
                 setAuthLoading(btn, false);
             }
@@ -435,10 +445,10 @@ const API = 'http://localhost:3000/api';
             const code = document.getElementById('regCode').value.trim();
             const p1 = document.getElementById('regPass').value;
             const p2 = document.getElementById('regPass2').value;
-            if (!validatePassword(p1)) return alert('Пароль не соответствует требованиям');
+            if (!validatePassword(p1)) return notifyError('Пароль не соответствует требованиям');
             if (p1 !== p2) {
                 document.getElementById('regPass2Error').classList.add('show');
-                return alert('Пароли не совпадают');
+                return notifyError('Пароли не совпадают');
             }
             const res = await fetch(API + '/auth/register/complete', {
                 method: 'POST',
@@ -450,14 +460,14 @@ const API = 'http://localhost:3000/api';
                 applyLoggedIn(data);
                 closeModal('registerModal');
                 showSuccess('Добро пожаловать, ' + (data.user.fullname || 'друг') + '!');
-            } else alert(data.error || 'Ошибка регистрации');
+            } else notifyError(data.error || 'Ошибка регистрации');
         }
 
         async function login() {
             const email = document.getElementById('loginEmail').value.trim();
             const pass = document.getElementById('loginPass').value;
-            if (!email || !pass) return alert('Введите email и пароль');
-            if (!validateEmail('loginEmail')) return alert('Введите корректный email');
+            if (!email || !pass) return notifyError('Введите email и пароль');
+            if (!validateEmail('loginEmail')) return notifyError('Введите корректный email');
             const res = await fetch(API + '/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -468,7 +478,7 @@ const API = 'http://localhost:3000/api';
                 applyLoggedIn(data);
                 closeModal('loginModal');
                 showSuccess('Добро пожаловать, ' + (data.user.fullname || 'друг') + '!');
-            } else alert('Ошибка: ' + (data.error || 'Вход не выполнен'));
+            } else notifyError(data.error || 'Вход не выполнен');
         }
 
         function applyLoggedIn(data) {
@@ -484,8 +494,8 @@ const API = 'http://localhost:3000/api';
         async function forgotSendCode() {
             const btn = event?.target?.closest?.('button');
             const email = document.getElementById('forgotEmail').value.trim();
-            if (!email) return alert('Введите email');
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert('Введите корректный email');
+            if (!email) return notifyError('Введите email');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return notifyError('Введите корректный email');
             setAuthLoading(btn, true);
             try {
                 const res = await fetch(API + '/auth/forgot-password/send-code', {
@@ -501,12 +511,13 @@ const API = 'http://localhost:3000/api';
                     document.getElementById('forgotCode').value = data.devCode || '';
                     showSuccess(handleMailSent(data, 'forgotCode'));
                 } else if (data.suggestRegister) {
-                    if (confirm((data.error || 'Аккаунт не найден.') + '\n\nСоздать аккаунт?')) {
+                    const choice = await showNoAccountChoice(email);
+                    if (choice === 'register') {
                         closeModal('forgotModal');
                         document.getElementById('regEmail').value = email;
                         showRegisterModal();
                     }
-                } else alert(data.error || 'Ошибка');
+                } else notifyError(data.error || 'Ошибка');
             } finally {
                 setAuthLoading(btn, false);
             }
@@ -517,8 +528,8 @@ const API = 'http://localhost:3000/api';
             const code = document.getElementById('forgotCode').value.trim();
             const p1 = document.getElementById('forgotPass').value;
             const p2 = document.getElementById('forgotPass2').value;
-            if (!validatePassword(p1)) return alert('Пароль не соответствует требованиям');
-            if (p1 !== p2) return alert('Пароли не совпадают');
+            if (!validatePassword(p1)) return notifyError('Пароль не соответствует требованиям');
+            if (p1 !== p2) return notifyError('Пароли не совпадают');
             const res = await fetch(API + '/auth/forgot-password/reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -531,7 +542,7 @@ const API = 'http://localhost:3000/api';
                 document.getElementById('loginEmail').value = email;
                 document.getElementById('loginPass').value = '';
                 showLoginModal();
-            } else alert(data.error || 'Ошибка');
+            } else notifyError(data.error || 'Ошибка');
         }
 
         function showEditProfileModal() {
@@ -559,7 +570,7 @@ const API = 'http://localhost:3000/api';
                 document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
                 document.getElementById('profileEmail').innerText = currentUser.email;
                 closeModal('editProfileModal');
-            } else alert('Ошибка');
+            } else notifyError('Ошибка сохранения');
         }
 
         function logout() {
@@ -677,8 +688,8 @@ const API = 'http://localhost:3000/api';
             const guests = document.getElementById('bookingGuests').value;
             const tableId = window.selectedTableId;
             
-            if (!date || !time) { alert('Выберите дату и время'); return; }
-            if (!tableId) { alert('Выберите стол'); return; }
+            if (!date || !time) { notifyError('Выберите дату и время'); return; }
+            if (!tableId) { notifyError('Выберите стол'); return; }
             
             const res = await fetch(API + '/bookings', {
                 method: 'POST',
@@ -691,7 +702,7 @@ const API = 'http://localhost:3000/api';
                 closeModal('bookingModal');
                 loadUserBookings();
             } else {
-                alert('❌ ' + data.error);
+                notifyError(data.error || 'Ошибка бронирования');
             }
         }
 
@@ -720,7 +731,7 @@ const API = 'http://localhost:3000/api';
         }
 
         async function cancelBooking(bookingId) {
-            if (confirm('Отменить бронирование?')) {
+            if (await showAppConfirm('Отменить это бронирование?', { title: 'Отмена бронирования', confirmLabel: 'Отменить', danger: true })) {
                 await fetch(API + `/bookings/${bookingId}/cancel`, {
                     method: 'PUT',
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
