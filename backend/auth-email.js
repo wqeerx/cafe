@@ -83,11 +83,15 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       [email, codeHash, purpose, payload ? JSON.stringify(payload) : null, expiresAt]
     );
 
-    const out = { message: `Код отправлен на ${email}. Проверьте входящие и папку «Спам».`, email };
+    const out = {
+      message: `Код отправлен на ${email}. Проверьте входящие и папку «Спам».`,
+      email,
+      mailSent: !mailResult.dev
+    };
     if (mailResult.dev) {
       out.devMode = true;
       out.devCode = code;
-      out.message = 'Почта не настроена. Код показан на экране и в консоли сервера.';
+      out.message = 'Почта не настроена. Код в консоли сервера.';
     }
     return out;
   }
@@ -253,7 +257,8 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
 
       const result = await saveAndSendCode(normEmail, 'reset_password', null);
       res.json({
-        message: 'Если аккаунт существует, код отправлен на email',
+        message: 'Код отправлен на email. Проверьте входящие и «Спам».',
+        mailSent: true,
         ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
       });
     } catch (e) {
@@ -311,7 +316,11 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       const normEmail = normalizeEmail(user.email);
       const result = await saveAndSendCode(normEmail, 'change_password', null);
       res.json({
-        message: result.devMode ? 'Код в консоли сервера (почта не настроена)' : 'Код отправлен на ' + normEmail,
+        message: result.devMode
+          ? 'Почта не настроена — код в консоли сервера'
+          : `Код отправлен на ${normEmail}. Проверьте «Спам».`,
+        mailSent: !result.devMode,
+        email: normEmail,
         ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
       });
     } catch (e) {

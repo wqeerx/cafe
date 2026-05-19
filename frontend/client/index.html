@@ -176,7 +176,7 @@
                 <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com" onblur="validateEmail('regEmail')"><div class="error-message" id="regEmailError">Введите корректный email</div></div>
                 <button class="btn-primary btn-full" onclick="registerSendCode()">Получить код на email</button></div>
             
-            <div id="regStep2" class="auth-step-panel" style="display:none;"><p class="auth-hint">Код отправлен на <strong id="regEmailDisplay"></strong></p>
+            <div id="regStep2" class="auth-step-panel" style="display:none;"><p class="auth-hint">Код отправлен на <strong id="regEmailDisplay"></strong>. Проверьте входящие и папку «Спам».</p>
                 <div class="form-group"><label>Код из письма</label><input type="text" id="regCode" placeholder="6 цифр" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
                 <button class="btn-primary btn-full" onclick="registerVerifyCode()">Подтвердить код</button>
                 <button type="button" class="btn-text-link" onclick="registerSendCode(true)">Отправить код снова</button>

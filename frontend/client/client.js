@@ -66,12 +66,24 @@ const API = 'http://localhost:3000/api';
             }
         }
 
-        function applyDevMailCode(data, inputId) {
-            if (!data || !data.devCode) return false;
-            const el = document.getElementById(inputId);
-            if (el) el.value = data.devCode;
-            alert('Почта на сервере не настроена.\n\nКод: ' + data.devCode + '\n\nПоложите файл .env в корень проекта (npm run setup:env) и перезапустите сервер.');
-            return true;
+        function handleMailSent(data, codeInputId) {
+            if (data && data.devCode && codeInputId) {
+                const el = document.getElementById(codeInputId);
+                if (el) el.value = data.devCode;
+                return 'Код подставлен (почта на сервере не настроена)';
+            }
+            if (data && data.mailSent) {
+                return data.message || 'Код отправлен на email. Проверьте «Спам».';
+            }
+            return data?.message || 'Готово';
+        }
+
+        function setAuthLoading(btn, loading) {
+            if (!btn) return;
+            btn.disabled = loading;
+            btn.dataset.loading = loading ? '1' : '';
+            if (loading) btn.dataset.prevText = btn.innerText, btn.innerText = 'Отправка…';
+            else if (btn.dataset.prevText) btn.innerText = btn.dataset.prevText;
         }
         
         function closeModal(id) { 
@@ -371,36 +383,51 @@ const API = 'http://localhost:3000/api';
 
         // Авторизация и профиль
         async function registerSendCode(isResend) {
+            const btn = event?.target?.closest?.('button') || document.querySelector('#regStep1 .btn-primary');
             const email = document.getElementById('regEmail').value.trim();
             const phone = getPhoneForSubmit('regPhone');
             const fullname = document.getElementById('regName').value.trim();
             if (!fullname || !phone || !email) return alert('Заполните все поля');
             if (!validateEmail('regEmail')) return alert('Введите корректный email');
-            const res = await fetch(API + '/auth/register/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, phone, fullname })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                document.getElementById('regEmailDisplay').innerText = email;
-                setRegisterStep(2);
-                const dev = applyDevMailCode(data, 'regCode');
-                showSuccess(dev ? 'Код подставлен (без почты)' : (isResend ? 'Код отправлен повторно — проверьте почту' : 'Код отправлен — проверьте почту и «Спам»'));
-            } else alert(data.error || 'Ошибка');
+            setAuthLoading(btn, true);
+            try {
+                const res = await fetch(API + '/auth/register/send-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, phone, fullname })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    document.getElementById('regEmailDisplay').innerText = email;
+                    document.getElementById('regCode').value = '';
+                    setRegisterStep(2);
+                    if (data.devCode) document.getElementById('regCode').value = data.devCode;
+                    showSuccess(handleMailSent(data, 'regCode'));
+                } else alert(data.error || 'Ошибка');
+            } finally {
+                setAuthLoading(btn, false);
+            }
         }
 
         async function registerVerifyCode() {
+            const btn = event?.target?.closest?.('button');
             const email = document.getElementById('regEmail').value.trim();
             const code = document.getElementById('regCode').value.trim();
-            if (!code || code.length < 6) return alert('Введите 6-значный код');
-            const res = await fetch(API + '/auth/register/verify-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, code })
-            });
-            if (res.ok) setRegisterStep(3);
-            else alert(await parseApiError(res));
+            if (!code || code.length < 6) return alert('Введите 6-значный код из письма');
+            setAuthLoading(btn, true);
+            try {
+                const res = await fetch(API + '/auth/register/verify-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+                if (res.ok) {
+                    setRegisterStep(3);
+                    showSuccess('Код подтверждён — придумайте пароль');
+                } else alert(await parseApiError(res));
+            } finally {
+                setAuthLoading(btn, false);
+            }
         }
 
         async function registerComplete() {
@@ -455,21 +482,28 @@ const API = 'http://localhost:3000/api';
         }
 
         async function forgotSendCode() {
+            const btn = event?.target?.closest?.('button');
             const email = document.getElementById('forgotEmail').value.trim();
             if (!email) return alert('Введите email');
-            const res = await fetch(API + '/auth/forgot-password/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                document.getElementById('forgotEmailDisplay').innerText = email;
-                document.getElementById('forgotStep1').style.display = 'none';
-                document.getElementById('forgotStep2').style.display = 'block';
-                const dev = applyDevMailCode(data, 'forgotCode');
-                showSuccess(dev ? 'Код подставлен (без почты)' : 'Если аккаунт есть — код на email (проверьте «Спам»)');
-            } else alert(data.error || 'Ошибка');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert('Введите корректный email');
+            setAuthLoading(btn, true);
+            try {
+                const res = await fetch(API + '/auth/forgot-password/send-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    document.getElementById('forgotEmailDisplay').innerText = email;
+                    document.getElementById('forgotStep1').style.display = 'none';
+                    document.getElementById('forgotStep2').style.display = 'block';
+                    document.getElementById('forgotCode').value = data.devCode || '';
+                    showSuccess(handleMailSent(data, 'forgotCode'));
+                } else alert(data.error || 'Ошибка');
+            } finally {
+                setAuthLoading(btn, false);
+            }
         }
 
         async function forgotReset() {
