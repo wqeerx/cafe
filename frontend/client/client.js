@@ -73,7 +73,7 @@ const API = 'http://localhost:3000/api';
                 return 'Код подставлен (почта на сервере не настроена)';
             }
             if (data && data.mailSent) {
-                return data.message || 'Код отправлен на email. Проверьте «Спам».';
+                return data.message || 'Код отправлен на email';
             }
             return data?.message || 'Готово';
         }
@@ -500,6 +500,12 @@ const API = 'http://localhost:3000/api';
                     document.getElementById('forgotStep2').style.display = 'block';
                     document.getElementById('forgotCode').value = data.devCode || '';
                     showSuccess(handleMailSent(data, 'forgotCode'));
+                } else if (data.suggestRegister) {
+                    if (confirm((data.error || 'Аккаунт не найден.') + '\n\nСоздать аккаунт?')) {
+                        closeModal('forgotModal');
+                        document.getElementById('regEmail').value = email;
+                        showRegisterModal();
+                    }
                 } else alert(data.error || 'Ошибка');
             } finally {
                 setAuthLoading(btn, false);

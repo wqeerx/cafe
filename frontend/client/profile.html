@@ -86,7 +86,7 @@
                     <button class="btn-outline" type="button" onclick="sendChangePasswordCode()">Отправить код на email</button>
                 </div>
                 <div id="pwdStep2" class="hidden">
-                    <p class="hint" id="pwdMailHint">Код отправлен на ваш email. Проверьте «Спам».</p>
+                    <p class="hint" id="pwdMailHint">Код отправлен на ваш email.</p>
                     <div class="form-group" style="margin-top:16px;"><label>Код из письма</label><input id="pwdCode" maxlength="6" inputmode="numeric" placeholder="6 цифр"></div>
                     <div class="form-group"><label>Новый пароль</label><input id="pwdNew" type="password"></div>
                     <div class="form-group"><label>Подтверждение</label><input id="pwdNew2" type="password"></div>
@@ -216,7 +216,7 @@
                     document.getElementById('pwdStep2').classList.remove('hidden');
                     if (data.devCode) document.getElementById('pwdCode').value = data.devCode;
                     const hint = document.getElementById('pwdMailHint');
-                    if (hint) hint.textContent = data.message || 'Код отправлен. Проверьте «Спам».';
+                    if (hint) hint.textContent = data.message || 'Код отправлен на email';
                     showProfileToast(data.devCode ? 'Код: ' + data.devCode : (data.message || 'Код отправлен на email'));
                 } else alert(data.error || 'Ошибка');
             } finally {

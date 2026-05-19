@@ -84,7 +84,7 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
     );
 
     const out = {
-      message: `Код отправлен на ${email}. Проверьте входящие и папку «Спам».`,
+      message: `Код отправлен на ${email}.`,
       email,
       mailSent: !mailResult.dev
     };
@@ -252,12 +252,15 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
         [normEmail]
       );
       if (!user || user.role !== 'client') {
-        return res.json({ message: 'Если аккаунт существует, код отправлен на email' });
+        return res.status(404).json({
+          error: 'Аккаунт с таким email не найден.',
+          suggestRegister: true
+        });
       }
 
       const result = await saveAndSendCode(normEmail, 'reset_password', null);
       res.json({
-        message: 'Код отправлен на email. Проверьте входящие и «Спам».',
+        message: `Код отправлен на ${normEmail}.`,
         mailSent: true,
         ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
       });
@@ -318,7 +321,7 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       res.json({
         message: result.devMode
           ? 'Почта не настроена — код в консоли сервера'
-          : `Код отправлен на ${normEmail}. Проверьте «Спам».`,
+          : `Код отправлен на ${normEmail}.`,
         mailSent: !result.devMode,
         email: normEmail,
         ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
