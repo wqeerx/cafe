@@ -5,7 +5,9 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
+    "dev": "nodemon backend/server.js",
+    "setup:env": "powershell -ExecutionPolicy Bypass -File scripts/setup-env.ps1",
+    "test:mail": "node scripts/test-mail.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

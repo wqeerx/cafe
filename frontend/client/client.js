@@ -373,11 +373,16 @@ const API = 'http://localhost:3000/api';
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, phone, fullname })
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 document.getElementById('regEmailDisplay').innerText = email;
                 setRegisterStep(2);
-                showSuccess(isResend ? 'Код отправлен повторно' : 'Код отправлен на email');
-            } else alert(await parseApiError(res));
+                if (data.devCode) {
+                    document.getElementById('regCode').value = data.devCode;
+                    alert('Почта не настроена на сервере.\n\nКод для регистрации: ' + data.devCode + '\n\nСоздайте файл .env с паролем приложения Gmail (см. .env.example).');
+                }
+                showSuccess(data.devCode ? 'Код подставлен (режим без почты)' : (isResend ? 'Код отправлен повторно' : 'Код отправлен на email'));
+            } else alert(data.error || 'Ошибка');
         }
 
         async function registerVerifyCode() {
@@ -452,12 +457,17 @@ const API = 'http://localhost:3000/api';
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 document.getElementById('forgotEmailDisplay').innerText = email;
                 document.getElementById('forgotStep1').style.display = 'none';
                 document.getElementById('forgotStep2').style.display = 'block';
-                showSuccess('Если аккаунт существует, код отправлен');
-            } else alert(await parseApiError(res));
+                if (data.devCode) {
+                    document.getElementById('forgotCode').value = data.devCode;
+                    alert('Почта не настроена. Код: ' + data.devCode);
+                }
+                showSuccess(data.devCode ? 'Код подставлен (без почты)' : 'Если аккаунт существует, код отправлен');
+            } else alert(data.error || 'Ошибка');
         }
 
         async function forgotReset() {

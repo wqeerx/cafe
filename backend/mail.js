@@ -2,8 +2,14 @@ const nodemailer = require('nodemailer');
 
 let transporter = null;
 
+function getSmtpPass() {
+  return String(process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
+}
+
 function isConfigured() {
-  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+  const user = String(process.env.SMTP_USER || '').trim();
+  const pass = getSmtpPass();
+  return !!(user && pass && pass !== 'ваш_пароль_приложения_gmail');
 }
 
 function getTransporter() {
@@ -14,8 +20,8 @@ function getTransporter() {
       port: parseInt(process.env.SMTP_PORT || '587', 10),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: String(process.env.SMTP_USER).trim(),
+        pass: getSmtpPass()
       }
     });
   }
@@ -51,18 +57,40 @@ async function sendVerificationCode(to, code, purpose) {
 
   const transport = getTransporter();
   if (!transport) {
-    console.log(`[Zerno Mail] ${purpose} → ${to}: код ${code} (SMTP не настроен, см. .env)`);
+    console.log(`[Zerno Mail] ${purpose} → ${to}: код ${code}`);
+    console.log('[Zerno Mail] SMTP не настроен. Создайте файл .env в корне проекта (см. .env.example)');
     return { ok: true, dev: true };
   }
 
-  await transport.sendMail({
-    from: process.env.MAIL_FROM || `"Zerno Coffee" <${process.env.SMTP_USER}>`,
-    to,
-    subject,
-    text,
-    html
-  });
-  return { ok: true };
+  try {
+    await transport.sendMail({
+      from: process.env.MAIL_FROM || `"Zerno Coffee" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text,
+      html
+    });
+    console.log(`[Zerno Mail] Письмо отправлено → ${to}`);
+    return { ok: true };
+  } catch (err) {
+    console.error('[Zerno Mail] Ошибка SMTP:', err.message);
+    const hint = err.message.includes('535') || err.message.includes('BadCredentials')
+      ? 'Неверный пароль приложения Gmail. Создайте новый: https://myaccount.google.com/apppasswords'
+      : err.message;
+    const error = new Error(hint);
+    error.cause = err;
+    throw error;
+  }
 }
 
-module.exports = { sendVerificationCode, isConfigured };
+async function verifySmtpConnection() {
+  if (!isConfigured()) return { ok: false, reason: 'no_env' };
+  try {
+    await getTransporter().verify();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+}
+
+module.exports = { sendVerificationCode, isConfigured, verifySmtpConnection };

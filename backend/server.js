@@ -625,11 +625,20 @@ require('./api-extensions')(app, db, bcrypt, {
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
-  const mailOk = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+const { isConfigured: mailConfigured, verifySmtpConnection } = require('./mail');
+
+app.listen(PORT, async () => {
   console.log(`\n✅ Сервер Zerno запущен!`);
   console.log(`📍 Адрес: http://localhost:${PORT}`);
-  console.log(`📧 Почта: ${mailOk ? process.env.SMTP_USER : 'не настроена (.env) — коды в консоли'}`);
+  if (mailConfigured()) {
+    const check = await verifySmtpConnection();
+    console.log(check.ok
+      ? `📧 Почта: ${process.env.SMTP_USER} (подключение OK)`
+      : `📧 Почта: ошибка — ${check.reason}`);
+  } else {
+    console.log('📧 Почта: не настроена — создайте файл .env в корне (скопируйте .env.example)');
+    console.log('   Коды подтверждения выводятся в эту консоль до настройки SMTP');
+  }
   console.log(`👑 Админ: +375291234567 / admin123`);
   console.log(`👨‍🍳 Сотрудник: +375291112233 / employee123`);
   console.log(`📱 Клиент: http://localhost:${PORT}/client/index.html\n`);

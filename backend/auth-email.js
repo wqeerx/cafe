@@ -81,8 +81,14 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       [email, codeHash, purpose, payload ? JSON.stringify(payload) : null, expiresAt]
     );
 
-    await sendVerificationCode(email, code, purpose);
-    return { message: 'Код отправлен на email' };
+    const mailResult = await sendVerificationCode(email, code, purpose);
+    const out = { message: 'Код отправлен на email' };
+    if (mailResult.dev) {
+      out.devMode = true;
+      out.devCode = code;
+      out.message = 'Код создан (почта не настроена — см. консоль сервера или devCode)';
+    }
+    return out;
   }
 
   async function findValidVerification(email, code, purpose) {
@@ -130,7 +136,7 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
         return res.status(429).json({ error: `Подождите ${e.waitSec} сек. перед повторной отправкой` });
       }
       console.error(e);
-      res.status(500).json({ error: 'Не удалось отправить код' });
+      res.status(500).json({ error: e.message || 'Не удалось отправить код' });
     }
   });
 
@@ -244,14 +250,17 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
         return res.json({ message: 'Если аккаунт существует, код отправлен на email' });
       }
 
-      await saveAndSendCode(normEmail, 'reset_password', null);
-      res.json({ message: 'Если аккаунт существует, код отправлен на email' });
+      const result = await saveAndSendCode(normEmail, 'reset_password', null);
+      res.json({
+        message: 'Если аккаунт существует, код отправлен на email',
+        ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
+      });
     } catch (e) {
       if (e.message === 'RATE_LIMIT') {
         return res.status(429).json({ error: `Подождите ${e.waitSec} сек.` });
       }
       console.error(e);
-      res.status(500).json({ error: 'Не удалось отправить код' });
+      res.status(500).json({ error: e.message || 'Не удалось отправить код' });
     }
   });
 
@@ -299,14 +308,17 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       }
 
       const normEmail = normalizeEmail(user.email);
-      await saveAndSendCode(normEmail, 'change_password', null);
-      res.json({ message: 'Код отправлен на ' + normEmail });
+      const result = await saveAndSendCode(normEmail, 'change_password', null);
+      res.json({
+        message: result.devMode ? 'Код в консоли сервера (почта не настроена)' : 'Код отправлен на ' + normEmail,
+        ...(result.devMode ? { devMode: true, devCode: result.devCode } : {})
+      });
     } catch (e) {
       if (e.message === 'RATE_LIMIT') {
         return res.status(429).json({ error: `Подождите ${e.waitSec} сек.` });
       }
       console.error(e);
-      res.status(500).json({ error: 'Не удалось отправить код' });
+      res.status(500).json({ error: e.message || 'Не удалось отправить код' });
     }
   });
 
