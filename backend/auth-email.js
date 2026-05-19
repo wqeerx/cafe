@@ -71,9 +71,11 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
   async function saveAndSendCode(email, purpose, payload) {
     await checkRateLimit(email, purpose);
     const code = generateCode();
+
+    const mailResult = await sendVerificationCode(email, code, purpose);
+
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MIN * 60 * 1000).toISOString();
-
     await dbRun(`DELETE FROM email_verifications WHERE email = ? AND purpose = ?`, [email, purpose]);
     await dbRun(
       `INSERT INTO email_verifications (email, code_hash, purpose, payload, expires_at)
@@ -81,12 +83,11 @@ module.exports = function registerAuthEmailRoutes(app, db, deps) {
       [email, codeHash, purpose, payload ? JSON.stringify(payload) : null, expiresAt]
     );
 
-    const mailResult = await sendVerificationCode(email, code, purpose);
-    const out = { message: 'Код отправлен на email' };
+    const out = { message: `Код отправлен на ${email}. Проверьте входящие и папку «Спам».`, email };
     if (mailResult.dev) {
       out.devMode = true;
       out.devCode = code;
-      out.message = 'Код создан (почта не настроена — см. консоль сервера или devCode)';
+      out.message = 'Почта не настроена. Код показан на экране и в консоли сервера.';
     }
     return out;
   }

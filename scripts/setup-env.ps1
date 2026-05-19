@@ -1,25 +1,20 @@
-# Создаёт .env из шаблона, если файла ещё нет
 $root = Split-Path -Parent $PSScriptRoot
 $envFile = Join-Path $root ".env"
 $example = Join-Path $root ".env.example"
 
 if (Test-Path $envFile) {
-    Write-Host ".env уже существует: $envFile"
-    Write-Host "Откройте его и укажите SMTP_PASS (пароль приложения Gmail)."
+    Write-Host ".env already exists: $envFile"
+    Write-Host "Edit SMTP_PASS with Gmail app password, then: npm start"
     exit 0
 }
 
 if (-not (Test-Path $example)) {
-    Write-Host "Не найден .env.example"
+    Write-Host ".env.example not found"
     exit 1
 }
 
 Copy-Item $example $envFile
-Write-Host "Создан $envFile"
-Write-Host ""
-Write-Host "Дальше:"
-Write-Host "1. Откройте https://myaccount.google.com/apppasswords"
-Write-Host "2. Создайте пароль приложения для zerno.coffee.by@gmail.com"
-Write-Host "3. Вставьте его в .env в строку SMTP_PASS= (можно с пробелами)"
-Write-Host "4. Перезапустите сервер: npm start"
-Write-Host "5. Проверка: node scripts/test-mail.js"
+Write-Host "Created: $envFile"
+Write-Host "1. Open .env and set SMTP_PASS (Gmail app password)"
+Write-Host "2. npm run test:mail"
+Write-Host "3. npm start"

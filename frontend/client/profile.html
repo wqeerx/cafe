@@ -197,10 +197,15 @@
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + getToken() }
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 document.getElementById('pwdStep2').classList.remove('hidden');
-                alert(data.message || 'Код отправлен');
+                if (data.devCode) {
+                    document.getElementById('pwdCode').value = data.devCode;
+                    alert('Почта не настроена на сервере. Код: ' + data.devCode);
+                } else {
+                    alert((data.message || 'Код отправлен') + '\n\nПроверьте папку «Спам».');
+                }
             } else alert(data.error || 'Ошибка');
         }
 

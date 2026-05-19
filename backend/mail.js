@@ -1,3 +1,4 @@
+require('./load-env').loadEnv();
 const nodemailer = require('nodemailer');
 
 let transporter = null;

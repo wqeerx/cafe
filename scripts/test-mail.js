@@ -1,8 +1,6 @@
-const path = require('path');
-const root = path.join(__dirname, '..');
-require('dotenv').config({ path: path.join(root, '.env') });
-if (!process.env.SMTP_USER) {
-  require('dotenv').config({ path: path.join(root, '.env.example') });
+const loaded = require('../backend/load-env').loadEnv();
+if (!loaded) {
+  console.error('Файл .env не найден. Запустите: npm run setup:env');
 }
 const { sendVerificationCode, isConfigured } = require('../backend/mail');
 

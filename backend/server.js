@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('./load-env').loadEnv();
 
 const express = require('express');
 const bcrypt = require('bcrypt');

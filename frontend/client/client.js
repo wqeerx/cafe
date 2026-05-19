@@ -65,6 +65,14 @@ const API = 'http://localhost:3000/api';
                 return 'Ошибка';
             }
         }
+
+        function applyDevMailCode(data, inputId) {
+            if (!data || !data.devCode) return false;
+            const el = document.getElementById(inputId);
+            if (el) el.value = data.devCode;
+            alert('Почта на сервере не настроена.\n\nКод: ' + data.devCode + '\n\nПоложите файл .env в корень проекта (npm run setup:env) и перезапустите сервер.');
+            return true;
+        }
         
         function closeModal(id) { 
             document.getElementById(id).style.display = 'none'; 
@@ -377,11 +385,8 @@ const API = 'http://localhost:3000/api';
             if (res.ok) {
                 document.getElementById('regEmailDisplay').innerText = email;
                 setRegisterStep(2);
-                if (data.devCode) {
-                    document.getElementById('regCode').value = data.devCode;
-                    alert('Почта не настроена на сервере.\n\nКод для регистрации: ' + data.devCode + '\n\nСоздайте файл .env с паролем приложения Gmail (см. .env.example).');
-                }
-                showSuccess(data.devCode ? 'Код подставлен (режим без почты)' : (isResend ? 'Код отправлен повторно' : 'Код отправлен на email'));
+                const dev = applyDevMailCode(data, 'regCode');
+                showSuccess(dev ? 'Код подставлен (без почты)' : (isResend ? 'Код отправлен повторно — проверьте почту' : 'Код отправлен — проверьте почту и «Спам»'));
             } else alert(data.error || 'Ошибка');
         }
 
@@ -462,11 +467,8 @@ const API = 'http://localhost:3000/api';
                 document.getElementById('forgotEmailDisplay').innerText = email;
                 document.getElementById('forgotStep1').style.display = 'none';
                 document.getElementById('forgotStep2').style.display = 'block';
-                if (data.devCode) {
-                    document.getElementById('forgotCode').value = data.devCode;
-                    alert('Почта не настроена. Код: ' + data.devCode);
-                }
-                showSuccess(data.devCode ? 'Код подставлен (без почты)' : 'Если аккаунт существует, код отправлен');
+                const dev = applyDevMailCode(data, 'forgotCode');
+                showSuccess(dev ? 'Код подставлен (без почты)' : 'Если аккаунт есть — код на email (проверьте «Спам»)');
             } else alert(data.error || 'Ошибка');
         }
 
