@@ -18,8 +18,9 @@
         .form-group label { font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px; }
         .form-group input, .form-group select, .form-group textarea {
             width: 100%; padding: 12px; border: 2px solid var(--border);
-            border-radius: 12px; font-family: inherit;
+            border-radius: 12px; font-family: inherit; box-sizing: border-box;
         }
+        .form-group input[readonly] { background: #fef8f0; color: #4a3a2a; cursor: default; }
         .char-count { font-size: 12px; color: var(--text-muted); text-align: right; }
         .summary-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f0e8; font-size: 14px; }
         .total-row { font-size: 20px; font-weight: bold; margin-top: 12px; }
@@ -29,9 +30,26 @@
         }
         .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
         .tz-note { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+        .time-row { display: flex; align-items: center; gap: 10px; }
+        .time-row input[type="time"] { flex: 1; min-width: 0; }
+        .time-step-btn {
+            flex-shrink: 0;
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: #fef8f0;
+            color: var(--primary);
+            font-size: 22px;
+            font-weight: 600;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .time-step-btn:hover:not(:disabled) { background: var(--primary); color: #f5e6d3; }
+        .time-step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
 </head>
-<body>
+<body class="zerno-client">
     <header class="page-header">
         <a href="index.html"><span class="material-symbols-rounded">arrow_back</span> Назад</a>
         <strong>Оформление заказа</strong>
@@ -41,15 +59,21 @@
     <div class="container">
         <div class="card" id="orderSummary"></div>
         <div class="card">
-            <p class="tz-note">Время указано по Москве (МСК, UTC+3)</p>
+            <div class="form-group">
+                <label>Адрес самовывоза</label>
+                <input type="text" id="pickupAddress" readonly>
+            </div>
             <div class="form-group">
                 <label>Дата самовывоза</label>
                 <input type="date" id="orderDate">
             </div>
             <div class="form-group">
                 <label>Время</label>
-                <input type="time" id="orderTime" step="1800">
-                <p class="hint">Кофейня работает с 10:00 до 22:00 (МСК). Минимум +30 мин от текущего времени.</p>
+                <div class="time-row">
+                    <button type="button" class="time-step-btn" id="timeMinus" title="На 30 минут раньше" aria-label="Минус 30 минут">−</button>
+                    <input type="time" id="orderTime" step="60">
+                    <button type="button" class="time-step-btn" id="timePlus" title="На 30 минут позже" aria-label="Плюс 30 минут">+</button>
+                </div>
             </div>
             <div class="form-group">
                 <label>Комментарий к заказу</label>
@@ -60,7 +84,7 @@
                 <label>Способ оплаты</label>
                 <select id="payment">
                     <option value="card">Банковская карта</option>
-                    <option value="cash">Наличные при получении</option>
+                    <option value="cash">Наличные</option>
                 </select>
             </div>
             <button class="btn-primary" onclick="submitOrder()">Подтвердить заказ</button>
@@ -68,11 +92,53 @@
     </div>
 
     <script>
-        const API = 'http://localhost:3000/api';
+        const API = '/api';
         const MAX_COMMENT = 200;
         let cart = [];
 
-        function getToken() { return localStorage.getItem('token'); }
+        function getToken() { return getAuthToken(); }
+
+        function applySlotToInputs(slot) {
+            document.getElementById('orderDate').value = slot.date;
+            document.getElementById('orderTime').value = slot.time;
+            updateTimeControls();
+        }
+
+        function getCurrentSlot() {
+            return clampPickupSlot(
+                document.getElementById('orderDate').value,
+                document.getElementById('orderTime').value
+            );
+        }
+
+        function updateTimeControls() {
+            const date = document.getElementById('orderDate').value;
+            const time = document.getElementById('orderTime').value;
+            const minBtn = document.getElementById('timeMinus');
+            const plusBtn = document.getElementById('timePlus');
+            const timeInput = document.getElementById('orderTime');
+
+            if (!date || !time) return;
+
+            const minAllowed = getMinPickupMinutesForDate(date);
+            const cur = parseTimeHM(time);
+            minBtn.disabled = cur <= minAllowed;
+            plusBtn.disabled = cur >= CAFE_LAST_ORDER_MIN;
+
+            timeInput.min = formatMinutesHM(CAFE_OPEN_MIN);
+            timeInput.max = formatMinutesHM(CAFE_LAST_ORDER_MIN);
+            if (date === getMoscowDateStr()) {
+                timeInput.min = formatMinutesHM(minAllowed);
+            }
+        }
+
+        function shiftTime(delta) {
+            const date = document.getElementById('orderDate').value;
+            const time = document.getElementById('orderTime').value;
+            if (!date || !time) return;
+            const next = adjustPickupSlot(date, time, delta);
+            applySlotToInputs(next);
+        }
 
         function initDates() {
             const slot = getMinOrderSlotMoscow();
@@ -80,29 +146,28 @@
             const timeInput = document.getElementById('orderTime');
 
             dateInput.min = slot.minDate;
-            dateInput.value = slot.date;
-            timeInput.min = '10:00';
-            timeInput.max = '22:00';
-            timeInput.value = slot.time;
+            applySlotToInputs(slot);
 
-            const syncTimeMin = () => {
-                if (dateInput.value === getMoscowDateStr()) {
-                    const s = getMinOrderSlotMoscow();
-                    timeInput.min = s.time;
-                    if (timeInput.value < s.time) timeInput.value = s.time;
-                } else {
-                    timeInput.min = '10:00';
-                    if (!timeInput.value || timeInput.value < '10:00') timeInput.value = '10:00';
-                }
-            };
-            dateInput.addEventListener('change', syncTimeMin);
-            syncTimeMin();
+            document.getElementById('pickupAddress').value = PICKUP_ADDRESS;
+
+            dateInput.addEventListener('change', () => {
+                const clamped = clampPickupSlot(dateInput.value, timeInput.value);
+                applySlotToInputs(clamped);
+            });
+
+            timeInput.addEventListener('change', () => {
+                const clamped = clampPickupSlot(dateInput.value, timeInput.value);
+                applySlotToInputs(clamped);
+            });
+
+            document.getElementById('timeMinus').addEventListener('click', () => shiftTime(-ORDER_SLOT_STEP));
+            document.getElementById('timePlus').addEventListener('click', () => shiftTime(ORDER_SLOT_STEP));
         }
 
         function renderSummary() {
             const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
             document.getElementById('orderSummary').innerHTML = `
-                <h3 style="margin-bottom:12px;font-family:Georgia,serif;">Ваш заказ</h3>
+                <h3 class="section-title" style="margin-bottom:12px;font-size:26px;text-align:left;">Ваш заказ</h3>
                 ${cart.map(i => `<div class="summary-item"><span>${i.name} ×${i.quantity}</span><span>${(i.price * i.quantity).toFixed(2)} BYN</span></div>`).join('')}
                 <div class="total-row">Итого: ${total.toFixed(2)} BYN</div>
             `;
@@ -118,11 +183,17 @@
                 appNotify('Комментарий не более 200 символов', 'error');
                 return;
             }
+            const slot = getCurrentSlot();
+            const err = validatePickupSlot(slot.date, slot.time);
+            if (err) {
+                appNotify(err, 'error');
+                return;
+            }
             const order = {
                 items: cart,
                 total: cart.reduce((s, i) => s + i.price * i.quantity, 0),
-                date: document.getElementById('orderDate').value,
-                time: document.getElementById('orderTime').value,
+                date: slot.date,
+                time: slot.time,
                 comment,
                 paymentMethod: document.getElementById('payment').value
             };
@@ -137,8 +208,8 @@
             const data = await res.json();
             if (res.ok) {
                 localStorage.removeItem('zerno_cart');
-                appNotify('Заказ оформлен!', 'success');
-                setTimeout(() => { window.location.href = 'profile.html'; }, 800);
+                appNotify('Заказ оформлен', 'success');
+                setTimeout(() => { window.location.href = 'profile.html'; }, 900);
             } else {
                 appNotify(data.error || 'Ошибка оформления', 'error');
             }
@@ -154,4 +225,3 @@
     </script>
 </body>
 </html>
-

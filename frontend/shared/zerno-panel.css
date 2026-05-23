@@ -1,0 +1,440 @@
+/* Панели admin / employee — единый каркас как «Управление меню» */
+
+body.zerno-panel {
+    --bg-main: #fcfaf7;
+    --bg-card: #ffffff;
+    --primary: #2c1810;
+    --primary-light: #523426;
+    --accent: #e8d5b5;
+    --text-dark: #2c1810;
+    --text-muted: #6e5d55;
+    --border: #e6ded6;
+    --danger: #dc3545;
+    --shadow-sm: 0 2px 8px rgba(44, 24, 16, 0.04);
+    --shadow-md: 0 12px 30px rgba(44, 24, 16, 0.06);
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --panel-heading-size: 22px;
+    --panel-heading-lh: 1.25;
+    --panel-heading-weight: 600;
+
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-dark);
+    background-color: var(--bg-main);
+    padding: 30px 20px;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+body.zerno-panel button,
+body.zerno-panel input,
+body.zerno-panel select,
+body.zerno-panel textarea {
+    font-family: inherit;
+}
+
+body.zerno-panel .container,
+body.zerno-panel .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+body.zerno-panel .header {
+    background-color: var(--primary);
+    color: var(--accent);
+    padding: 20px 30px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+body.zerno-panel .header h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.zerno-panel h1,
+body.zerno-panel h2,
+body.zerno-panel .section-title,
+body.zerno-panel .edit-modal .modal-header,
+body.zerno-panel .panel-head h2,
+body.zerno-panel .header h1,
+body.zerno-panel .header h2,
+body.zerno-panel .header-brand h1 {
+    font-family: inherit;
+    font-weight: var(--panel-heading-weight);
+    font-size: var(--panel-heading-size);
+    line-height: var(--panel-heading-lh);
+}
+
+body.zerno-panel .back-btn {
+    background-color: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(232, 213, 181, 0.3);
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+body.zerno-panel .back-btn:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+    border-color: var(--accent);
+}
+
+body.zerno-panel .form-panel,
+body.zerno-panel .filters,
+body.zerno-panel .dashboard-controls,
+body.zerno-panel .panel {
+    background-color: var(--bg-card);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+body.zerno-panel .form-panel h2 {
+    color: var(--text-dark);
+    margin: 0 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+}
+
+body.zerno-panel .form-panel .panel-head h2,
+body.zerno-panel .form-panel .panel-head .section-title {
+    margin: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+body.zerno-panel .panel h3 {
+    color: var(--text-dark);
+    font-size: clamp(1.15rem, 2.2vw, 1.35rem);
+    font-weight: 600;
+    margin: 0 0 14px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body.zerno-panel .section-title {
+    color: var(--text-dark);
+    margin: 0 0 24px;
+    text-align: left;
+}
+
+body.zerno-panel .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+}
+
+body.zerno-panel .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+body.zerno-panel .form-group label,
+body.zerno-panel .filter-group label {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 13px;
+}
+
+body.zerno-panel .form-group input,
+body.zerno-panel .form-group select,
+body.zerno-panel .form-group textarea,
+body.zerno-panel .filter-group input,
+body.zerno-panel .filter-group select {
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text-dark);
+    background-color: #faf9f6;
+    transition: var(--transition);
+}
+
+body.zerno-panel .form-group input:focus,
+body.zerno-panel .form-group select:focus,
+body.zerno-panel .form-group textarea:focus,
+body.zerno-panel .filter-group input:focus,
+body.zerno-panel .filter-group select:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(82, 52, 38, 0.08);
+}
+
+body.zerno-panel .btn-primary,
+body.zerno-panel .btn-apply {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+body.zerno-panel .btn-primary:hover,
+body.zerno-panel .btn-apply:hover {
+    background-color: var(--primary-light);
+    transform: translateY(-1px);
+}
+
+body.zerno-panel .btn-secondary {
+    background-color: #e6ded6;
+    color: var(--text-dark);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: inherit;
+    transition: var(--transition);
+}
+
+body.zerno-panel .btn-secondary:hover {
+    background-color: #dad1c7;
+}
+
+body.zerno-panel .hint {
+    background: #faf9f6;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+body.zerno-panel .order-card,
+body.zerno-panel .client-card,
+body.zerno-panel .employee-card,
+body.zerno-panel .card,
+body.zerno-panel .logs-table-wrap {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+body.zerno-panel .order-card,
+body.zerno-panel .client-card,
+body.zerno-panel .employee-card,
+body.zerno-panel .card {
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+body.zerno-panel .logs-table-wrap {
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+body.zerno-panel .search-box,
+body.zerno-panel .search-input {
+    padding: 11px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background-color: #faf9f6;
+    color: var(--text-dark);
+    transition: var(--transition);
+}
+
+body.zerno-panel .search-box:focus,
+body.zerno-panel .search-input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(82, 52, 38, 0.08);
+}
+
+body.zerno-panel .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+body.zerno-panel .tab {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text-dark);
+    transition: var(--transition);
+}
+
+body.zerno-panel .tab:hover {
+    border-color: var(--primary-light);
+    background: #faf9f6;
+}
+
+body.zerno-panel .tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+body.zerno-panel .logout-btn {
+    background-color: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(232, 213, 181, 0.3);
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+body.zerno-panel .logout-btn:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+    border-color: var(--accent);
+}
+
+body.zerno-panel .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+body.zerno-panel .header-brand h1 {
+    margin: 0;
+}
+
+body.zerno-panel .user-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+body.zerno-panel .admin-profile {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+body.zerno-panel .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+body.zerno-panel .admin-card {
+    background-color: var(--bg-card);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+body.zerno-panel .admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-light);
+}
+
+body.zerno-panel .admin-card:active {
+    transform: translateY(-2px);
+}
+
+body.zerno-panel .admin-card .icon-wrapper {
+    background-color: #fcf8f2;
+    color: var(--primary);
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: var(--transition);
+}
+
+body.zerno-panel .admin-card:hover .icon-wrapper {
+    background-color: var(--primary);
+    color: var(--accent);
+}
+
+body.zerno-panel .admin-card .icon {
+    font-size: 32px;
+}
+
+body.zerno-panel .admin-card h3 {
+    color: var(--text-dark);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    font-family: inherit;
+}
+
+body.zerno-panel .admin-card p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    body.zerno-panel {
+        padding: 20px 16px;
+    }
+
+    body.zerno-panel .header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    body.zerno-panel .form-panel,
+    body.zerno-panel .filters,
+    body.zerno-panel .dashboard-controls,
+    body.zerno-panel .panel {
+        padding: 20px;
+    }
+}

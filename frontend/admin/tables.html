@@ -3,117 +3,427 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zerno — Столы</title>
+    <title>Zerno — Схема столов</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <link rel="stylesheet" href="../shared/floor-plan.css">
+    <script src="../shared/zerno-dialog.js"></script>
+    <script src="../shared/floor-plan.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; color: #2c1810; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header {
-            background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px;
-            margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 20px;
+            align-items: start;
         }
-        .back-btn {
-            background: #e8d5b5; color: #2c1810; padding: 8px 20px; border-radius: 30px;
-            text-decoration: none; font-weight: 600;
+        @media (max-width: 900px) {
+            .layout-grid { grid-template-columns: 1fr; }
         }
-        .panel {
-            background: white; border-radius: 16px; padding: 24px; border: 1px solid #e0d0c0; margin-bottom: 20px;
+        .panel h3 {
+            font-size: 16px;
+            margin: 0 0 14px;
+            font-weight: 600;
+            font-family: 'Segoe UI', sans-serif;
+            border-bottom: none;
+            padding-bottom: 0;
         }
-        .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #7a7065; }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
         .form-group input {
-            padding: 10px 14px; border: 2px solid #e0d0c0; border-radius: 12px; font-family: inherit; width: 120px;
+            width: 88px;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            background: #fef8f0;
         }
         .btn-primary {
-            background: #2c1810; color: #e8d5b5; border: none; padding: 10px 22px;
-            border-radius: 30px; cursor: pointer; font-weight: 600;
+            border: none;
+            background: var(--primary);
+            color: #f5e6d3;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
         }
-        .btn-danger {
-            background: transparent; border: 1px solid #c0392b; color: #c0392b;
-            padding: 6px 14px; border-radius: 20px; cursor: pointer;
+        .btn-secondary {
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
         }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f5f0e8; }
+        .sidebar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .table-list-mini {
+            margin-top: 16px;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+        .table-list-mini button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin-top: 6px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fef8f0;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .table-list-mini button:hover { border-color: var(--primary); }
+        .fp-floor-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .fp-delete-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 14px 16px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+        .fp-delete-list-title {
+            width: 100%;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin: 0 0 4px;
+        }
+        .fp-delete-list-empty {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+        .fp-delete-btn {
+            border: 1px solid rgba(192, 57, 43, 0.35);
+            background: #fff5f5;
+            color: #c0392b;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .fp-delete-btn:hover {
+            background: #c0392b;
+            color: white;
+        }
     </style>
 </head>
-<body>
+<body class="zerno-panel">
     <div class="container">
         <div class="header">
-            <h2><span class="material-symbols-rounded" style="vertical-align:middle">table_restaurant</span> Управление столами</h2>
-            <a href="index.html" class="back-btn">← На главную</a>
+            <h2><span class="material-symbols-rounded">table_restaurant</span> Схема столов</h2>
+            <a href="index.html" class="back-btn"><span class="material-symbols-rounded" style="font-size:18px;">arrow_back</span> На главную</a>
         </div>
 
-        <div class="panel">
-            <h3 style="margin-bottom:16px;">Добавить стол</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Номер стола</label>
-                    <input type="number" id="tableNumber" min="1">
+        <div class="layout-grid">
+            <div class="panel">
+                <div class="fp-floor-wrap">
+                    <div id="floorPlan" class="fp-floor">
+                        <span class="fp-floor-label">Зал кофейни</span>
+                    </div>
+                    <div class="fp-floor-footer">
+                        <button type="button" class="btn-secondary" onclick="saveAllPositions()">Сохранить схему</button>
+                        <div id="tableDeleteList" class="fp-delete-list"></div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Вместимость</label>
-                    <input type="number" id="tableCapacity" min="1" max="12" value="4">
-                </div>
-                <button class="btn-primary" onclick="addTable()">Добавить</button>
             </div>
-        </div>
 
-        <div class="panel">
-            <h3>Список столов</h3>
-            <div id="tablesList"><p>Загрузка...</p></div>
+            <div>
+                <div class="panel">
+                    <h3>Добавить стол</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>№ стола</label>
+                            <input type="number" id="tableNumber" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Стульев</label>
+                            <input type="number" id="tableCapacity" min="1" max="6" value="4" title="Количество стульев">
+                        </div>
+                        <button type="button" class="btn-primary" onclick="addTable()">Добавить</button>
+                    </div>
+                    <p class="fp-hint" style="margin-top:10px;">Вместимость = число стульев вокруг стола (от 1 до 6).</p>
+                </div>
+
+                <div class="panel" style="margin-top:16px;">
+                    <h3>Элементы зала</h3>
+                    <p class="fp-hint">Перетащите на схему. Можно добавить несколько стен.</p>
+                    <div id="markerPalette" class="fp-marker-palette"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        const API = 'http://localhost:3000/api';
-        const token = localStorage.getItem('token');
+        const API = '/api';
+        let tables = [];
+        let markers = [];
+        let saveTimer = null;
+        let markerSaveTimer = null;
 
-        async function loadTables() {
-            const res = await fetch(API + '/tables', { headers: { Authorization: 'Bearer ' + token } });
-            const tables = await res.json();
-            const el = document.getElementById('tablesList');
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        function authHeaders(json) {
+            const h = { Authorization: 'Bearer ' + getToken() };
+            if (json) h['Content-Type'] = 'application/json';
+            return h;
+        }
+
+        function ensureAdmin() {
+            const token = getToken();
+            const role = localStorage.getItem('userRole');
+            if (!token || role !== 'admin') {
+                window.location.href = '/employee/login.html';
+                return false;
+            }
+            return true;
+        }
+
+        async function loadAll() {
+            const [tRes, mRes] = await Promise.all([
+                fetch(API + '/tables', { headers: authHeaders() }),
+                fetch(API + '/floor-markers')
+            ]);
+            tables = (await tRes.json()).map(t => {
+                const n = ZernoFloorPlan.normalizeTable(t);
+                if (!ZernoFloorPlan.isPlaced(n)) {
+                    return { ...n, placed: 1, x: 50, y: 50 };
+                }
+                return n;
+            });
+            markers = await mRes.json();
+            renderAll();
+        }
+
+        function renderAll() {
+            const floor = document.getElementById('floorPlan');
+            const floorOpts = {
+                mode: 'edit',
+                onDragEnd: (pos) => {
+                    if (pos.isMarker) updateMarkerLocal(pos);
+                    else updateTableLocal(pos);
+                }
+            };
+            const markerOpts = {
+                mode: 'edit',
+                onDragEnd: (pos) => updateMarkerLocal(pos),
+                onRotate: (pos) => updateMarkerLocal(pos),
+                onDelete: (m) => deleteMarker(m.id)
+            };
+
+            ZernoFloorPlan.renderMarkers(floor, markers, markerOpts);
+            ZernoFloorPlan.renderFloor(floor, tables, floorOpts);
+
+            const deleteList = document.getElementById('tableDeleteList');
             if (!tables.length) {
-                el.innerHTML = '<p>Столов пока нет</p>';
+                deleteList.innerHTML = '<p class="fp-delete-list-empty">Столов пока нет</p>';
                 return;
             }
-            el.innerHTML = '<table><tr><th>№</th><th>Вместимость</th><th></th></tr>' +
-                tables.map(t => '<tr><td>' + t.number + '</td><td>' + t.capacity + ' мест</td><td>' +
-                '<button class="btn-danger" onclick="deleteTable(' + t.id + ')">Удалить</button></td></tr>').join('') +
-                '</table>';
+            const sorted = [...tables].sort((a, b) => a.number - b.number);
+            deleteList.innerHTML =
+                '<p class="fp-delete-list-title">Удалить стол полностью</p>' +
+                sorted.map(t =>
+                    `<button type="button" class="fp-delete-btn" onclick="deleteTable(${t.id})">№${t.number} · ${t.capacity} ${ZernoFloorPlan.chairLabel(t.capacity)}</button>`
+                ).join('');
+        }
+
+        function initPalettes() {
+            ZernoFloorPlan.renderMarkerPalette(document.getElementById('markerPalette'));
+            ZernoFloorPlan.attachMarkerPaletteToFloor(
+                document.getElementById('markerPalette'),
+                document.getElementById('floorPlan'),
+                { onPlace: (pos) => createMarkerOnFloor(pos) }
+            );
+        }
+
+        async function createMarkerOnFloor(pos) {
+            const res = await fetch(API + '/admin/floor-markers', {
+                method: 'POST',
+                headers: authHeaders(true),
+                body: JSON.stringify(pos)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                markers.push(data);
+                appNotify(ZernoFloorPlan.MARKER_META[pos.kind]?.label + ' добавлен', 'success');
+                renderAll();
+            } else if (res.status === 403 || res.status === 401) {
+                appNotify((data.error || 'Нет доступа') + '. Выйдите и войдите снова как администратор.', 'error');
+            } else {
+                appNotify(data.error || 'Ошибка', 'error');
+            }
+        }
+
+        function updateMarkerLocal(pos) {
+            const m = markers.find(x => x.id === pos.id);
+            if (!m) return;
+            m.x = pos.x;
+            m.y = pos.y;
+            if (pos.rotation != null) m.rotation = pos.rotation;
+            clearTimeout(markerSaveTimer);
+            markerSaveTimer = setTimeout(() => saveMarker(pos), 400);
+        }
+
+        async function saveMarker(pos) {
+            await fetch(API + '/admin/floor-markers/' + pos.id, {
+                method: 'PUT',
+                headers: authHeaders(true),
+                body: JSON.stringify({
+                    x: pos.x,
+                    y: pos.y,
+                    rotation: pos.rotation != null ? pos.rotation : 0
+                })
+            });
+        }
+
+        async function deleteMarker(id) {
+            const m = markers.find(x => x.id === id);
+            const label = ZernoFloorPlan.MARKER_META[m?.kind]?.label || 'элемент';
+            const ok = await showAppConfirm(`Удалить «${label}» со схемы?`, {
+                title: 'Удаление', confirmLabel: 'Удалить', cancelLabel: 'Отмена', danger: true
+            });
+            if (!ok) return;
+            const res = await fetch(API + '/admin/floor-markers/' + id, {
+                method: 'DELETE',
+                headers: authHeaders()
+            });
+            if (res.ok) {
+                markers = markers.filter(x => x.id !== id);
+                appNotify('Удалено', 'success');
+                renderAll();
+            }
+        }
+
+        function updateTableLocal(pos) {
+            const t = tables.find(x => x.id === pos.id);
+            if (!t) return;
+            const needRerender = !ZernoFloorPlan.isPlaced(t) && pos.placed;
+            t.x = pos.x;
+            t.y = pos.y;
+            t.placed = pos.placed ? 1 : 0;
+            scheduleSave(pos);
+            if (needRerender) renderAll();
+        }
+
+        function scheduleSave(pos) {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => savePosition(pos), 400);
+        }
+
+        async function savePosition(pos) {
+            await fetch(API + '/admin/tables/' + pos.id + '/position', {
+                method: 'PUT',
+                headers: authHeaders(true),
+                body: JSON.stringify({ x: pos.x, y: pos.y, placed: pos.placed ? 1 : 0 })
+            });
+        }
+
+        async function saveAllPositions() {
+            const payload = tables.map(t => ({
+                id: t.id,
+                x: t.x || 0,
+                y: t.y || 0,
+                placed: ZernoFloorPlan.isPlaced(t) ? 1 : 0,
+            }));
+            const res = await fetch(API + '/admin/tables/layout', {
+                method: 'PUT',
+                headers: authHeaders(true),
+                body: JSON.stringify({ tables: payload })
+            });
+            if (res.ok) appNotify('Схема сохранена', 'success');
+            else appNotify('Ошибка сохранения', 'error');
         }
 
         async function addTable() {
             const number = parseInt(document.getElementById('tableNumber').value, 10);
             const capacity = parseInt(document.getElementById('tableCapacity').value, 10);
-            if (!number || !capacity) { alert('Укажите номер и вместимость'); return; }
+            if (!number) {
+                appNotify('Укажите номер стола', 'error');
+                return;
+            }
+            if (!capacity || capacity < 1 || capacity > 6) {
+                appNotify('Укажите количество стульев от 1 до 6', 'error');
+                return;
+            }
             const res = await fetch(API + '/admin/tables', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                headers: authHeaders(true),
                 body: JSON.stringify({ number, capacity })
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
+                const row = ZernoFloorPlan.normalizeTable({
+                    id: data.id,
+                    number: data.number ?? number,
+                    capacity: data.capacity ?? capacity,
+                    x: data.x != null ? data.x : 50,
+                    y: data.y != null ? data.y : 50,
+                    placed: data.placed != null ? data.placed : 1
+                });
+                tables.push(row);
                 document.getElementById('tableNumber').value = '';
-                loadTables();
+                appNotify(`Стол №${number} добавлен в центр схемы`, 'success');
+                renderAll();
             } else {
-                const d = await res.json();
-                alert(d.error || 'Ошибка');
+                appNotify(data.error || 'Ошибка', 'error');
             }
         }
 
         async function deleteTable(id) {
-            if (!confirm('Удалить стол?')) return;
-            await fetch(API + '/admin/tables/' + id, {
+            const t = tables.find(x => x.id === id);
+            const ok = await showAppConfirm(
+                `Удалить стол №${t?.number || ''} полностью?<br>Он исчезнет из схемы и из системы.`,
+                { title: 'Удаление стола', confirmLabel: 'Удалить', cancelLabel: 'Отмена', danger: true, html: true }
+            );
+            if (!ok) return;
+            const res = await fetch(API + '/admin/tables/' + id, {
                 method: 'DELETE',
-                headers: { Authorization: 'Bearer ' + token }
+                headers: authHeaders()
             });
-            loadTables();
+            if (res.ok) {
+                tables = tables.filter(x => x.id !== id);
+                appNotify('Стол удалён', 'success');
+                renderAll();
+            } else {
+                appNotify('Ошибка удаления', 'error');
+            }
         }
 
         window.onload = () => {
-            if (!token) { location.href = '/employee/login.html'; return; }
-            loadTables();
+            if (!ensureAdmin()) return;
+            initPalettes();
+            loadAll();
         };
     </script>
 </body>

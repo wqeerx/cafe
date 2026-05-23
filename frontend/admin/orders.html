@@ -7,132 +7,407 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <link rel="stylesheet" href="../shared/zerno-theme.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: #2c1810; color: #e8d5b5; padding: 15px 25px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .back-btn { background: #e8d5b5; color: #2c1810; padding: 8px 20px; border-radius: 30px; text-decoration: none; font-weight: 600; }
-        .hint { background: #fef8f0; border: 1px solid #e0d0c0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; color: #5a4a3a; }
-        .toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
-        .search-input {
-            flex: 1; min-width: 220px; padding: 12px 18px; border: 2px solid #e0d0c0;
-            border-radius: 30px; font-family: inherit;
+        .menu-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
         }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab { padding: 10px 20px; border-radius: 20px; border: 1px solid #e0d0c0; background: white; cursor: pointer; font-weight: 600; }
-        .tab.active { background: #2c1810; color: white; }
-        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; border: 1px solid #e0d0c0; }
-        .order-card-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+        .menu-toolbar-left {
+            flex: 1 1 240px;
+            min-width: 200px;
+        }
+        .menu-toolbar-right {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+            justify-content: flex-end;
+        }
+        .menu-search-input {
+            width: 100%;
+            max-width: 380px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-dark);
+            background: #faf9f6;
+            box-sizing: border-box;
+        }
+        .menu-search-input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(82, 52, 38, 0.08);
+        }
+        .menu-toolbar label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .orders-status-filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .orders-status-filters .tab {
+            margin: 0;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+        .orders-status-filters .tab .tab-count {
+            display: inline-block;
+            min-width: 1.25em;
+            margin-left: 4px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(44, 24, 16, 0.08);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .orders-status-filters .tab.active .tab-count {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .menu-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        .menu-page-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+        .menu-page-btn {
+            min-width: 36px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-dark);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .menu-page-btn:hover:not(:disabled) {
+            border-color: var(--primary-light);
+            background: #faf9f6;
+        }
+        .menu-page-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .menu-page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .order-time {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
         .btn-view {
-            background: #2c1810; color: #e8d5b5; border: none; padding: 8px 16px;
-            border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            font-family: inherit;
         }
+        .btn-view:hover { background: var(--primary-light); }
         .detail-modal {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
         .detail-modal.open { display: flex; }
         .detail-content {
-            background: white; border-radius: 20px; padding: 28px; max-width: 520px;
-            width: 100%; max-height: 85vh; overflow-y: auto;
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
         }
-        .detail-content table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
-        .detail-content th, .detail-content td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .detail-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .detail-content th,
+        .detail-content td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
         .detail-content th { background: #f5f0e8; }
     </style>
 </head>
-<body>
+<body class="zerno-panel">
     <div class="container">
         <div class="header">
-            <h2>Просмотр заказов</h2>
-            <a href="index.html" class="back-btn">← На главную</a>
+            <h2><span class="material-symbols-rounded">receipt_long</span> Просмотр заказов</h2>
+            <a href="index.html" class="back-btn"><span class="material-symbols-rounded" style="font-size:18px;">arrow_back</span> На главную</a>
         </div>
-        <div class="hint">
-            Администратор только просматривает заказы. Изменение статуса выполняет сотрудник в своей панели.
+
+        <div class="form-panel">
+            <div class="menu-toolbar">
+                <div class="menu-toolbar-left">
+                    <input type="search" id="searchOrders" class="menu-search-input"
+                        placeholder="Поиск: № заказа, клиент, телефон…"
+                        oninput="onOrdersFilterChange()" autocomplete="off">
+                </div>
+                <div class="menu-toolbar-right">
+                    <label>Статус:</label>
+                    <div class="orders-status-filters" id="statusTabs"></div>
+                </div>
+            </div>
+
+            <div id="ordersList">Загрузка заказов…</div>
+            <div id="ordersPagination" class="menu-pagination"></div>
         </div>
-        <div class="toolbar">
-            <input type="text" class="search-input" id="searchOrders" placeholder="Поиск: № заказа, клиент, телефон..." oninput="renderOrders()">
-        </div>
-        <div class="tabs" id="statusTabs">
-            <button class="tab active" data-status="all">Все</button>
-            <button class="tab" data-status="принят">Принят</button>
-            <button class="tab" data-status="готовится">Готовится</button>
-            <button class="tab" data-status="готов к выдаче">Готов к выдаче</button>
-            <button class="tab" data-status="выдан">Выдан</button>
-            <button class="tab" data-status="отменён">Отменён</button>
-        </div>
-        <div id="ordersList"></div>
     </div>
 
-    <div id="detailModal" class="detail-modal" onclick="if(event.target===this)closeDetail()">
+    <div id="detailModal" class="detail-modal" onclick="if (event.target === this) closeDetail()">
         <div class="detail-content" id="detailBody"></div>
     </div>
 
     <script>
-        const API = 'http://localhost:3000/api';
+        const API = '/api';
         const token = localStorage.getItem('token');
+        const ORDERS_PAGE_SIZE = 10;
+        const STATUS_TABS = [
+            { id: 'all', label: 'Все' },
+            { id: 'принят', label: 'Принят' },
+            { id: 'готовится', label: 'Готовится' },
+            { id: 'готов к выдаче', label: 'Готов к выдаче' },
+            { id: 'выдан', label: 'Выдан' },
+            { id: 'отменён', label: 'Отменён' }
+        ];
+
         let currentStatus = 'all';
         let allOrders = [];
+        let ordersPage = 1;
 
-        document.querySelectorAll('#statusTabs .tab').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('#statusTabs .tab').forEach(t => t.classList.remove('active'));
-                btn.classList.add('active');
-                currentStatus = btn.dataset.status;
-                loadOrders();
-            };
-        });
-
-        async function loadOrders() {
-            const url = API + '/admin/orders' + (currentStatus !== 'all' ? '?status=' + encodeURIComponent(currentStatus) : '');
-            const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-            allOrders = await res.json();
-            renderOrders();
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
-        function renderOrders() {
+        function formatOrderDateTime(o) {
+            const date = o.order_date || '—';
+            const time = o.order_time || '—';
+            return `${date} ${time}`;
+        }
+
+        function orderSortKey(o) {
+            const created = o.created_at ? new Date(o.created_at).getTime() : NaN;
+            if (!Number.isNaN(created)) return created;
+            const date = o.order_date || '';
+            const time = (o.order_time || '00:00').slice(0, 5);
+            const parsed = Date.parse(`${date}T${time}`);
+            return Number.isNaN(parsed) ? 0 : parsed;
+        }
+
+        function getStatusCounts() {
+            const counts = { all: allOrders.length };
+            STATUS_TABS.forEach(tab => {
+                if (tab.id === 'all') return;
+                counts[tab.id] = allOrders.filter(o => o.status === tab.id).length;
+            });
+            return counts;
+        }
+
+        function renderStatusTabs() {
+            const counts = getStatusCounts();
+            const el = document.getElementById('statusTabs');
+            el.innerHTML = STATUS_TABS.map(tab => {
+                const active = tab.id === currentStatus ? ' active' : '';
+                const count = counts[tab.id] ?? 0;
+                return `<button type="button" class="tab${active}" data-status="${esc(tab.id)}">${esc(tab.label)} <span class="tab-count">${count}</span></button>`;
+            }).join('');
+            el.querySelectorAll('.tab').forEach(btn => {
+                btn.onclick = () => {
+                    currentStatus = btn.dataset.status;
+                    ordersPage = 1;
+                    renderStatusTabs();
+                    renderOrders();
+                };
+            });
+        }
+
+        function getFilteredOrders() {
             const q = document.getElementById('searchOrders').value.toLowerCase().trim();
-            let list = allOrders;
+            let list = [...allOrders];
+            if (currentStatus !== 'all') {
+                list = list.filter(o => o.status === currentStatus);
+            }
             if (q) {
                 list = list.filter(o =>
                     String(o.id).includes(q) ||
                     (o.user_name && o.user_name.toLowerCase().includes(q)) ||
-                    (o.user_phone && o.user_phone.includes(q))
+                    (o.user_phone && String(o.user_phone).includes(q))
                 );
             }
+            list.sort((a, b) => orderSortKey(b) - orderSortKey(a));
+            return list;
+        }
+
+        function renderOrdersPagination(totalItems, page, totalPages) {
+            const el = document.getElementById('ordersPagination');
+            if (!el) return;
+            if (!totalItems) {
+                el.innerHTML = '';
+                return;
+            }
+            const from = (page - 1) * ORDERS_PAGE_SIZE + 1;
+            const to = Math.min(page * ORDERS_PAGE_SIZE, totalItems);
+            let html = `<span class="menu-page-info">${from}–${to} из ${totalItems}</span>`;
+            if (totalPages > 1) {
+                html += `<button type="button" class="menu-page-btn" onclick="goOrdersPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>‹</button>`;
+                for (let p = 1; p <= totalPages; p++) {
+                    if (totalPages > 7 && Math.abs(p - page) > 2 && p !== 1 && p !== totalPages) {
+                        if (p === 2 || p === totalPages - 1) html += '<span class="menu-page-info">…</span>';
+                        continue;
+                    }
+                    html += `<button type="button" class="menu-page-btn${p === page ? ' active' : ''}" onclick="goOrdersPage(${p})">${p}</button>`;
+                }
+                html += `<button type="button" class="menu-page-btn" onclick="goOrdersPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>›</button>`;
+            }
+            el.innerHTML = html;
+        }
+
+        function goOrdersPage(page) {
+            ordersPage = page;
+            renderOrders();
+            document.getElementById('ordersList')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function onOrdersFilterChange() {
+            ordersPage = 1;
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const list = getFilteredOrders();
+            const totalPages = Math.max(1, Math.ceil(list.length / ORDERS_PAGE_SIZE) || 1);
+            if (ordersPage > totalPages) ordersPage = totalPages;
+            if (ordersPage < 1) ordersPage = 1;
+
+            renderStatusTabs();
+
             const el = document.getElementById('ordersList');
-            if (!list.length) { el.innerHTML = '<p style="text-align:center;padding:40px;">Нет заказов</p>'; return; }
-            el.innerHTML = list.map(o => `
+            if (!list.length) {
+                const q = document.getElementById('searchOrders').value.trim();
+                el.innerHTML = `<p style="text-align:center;padding:40px;color:#7a5a4a;">${q || currentStatus !== 'all' ? 'Ничего не найдено' : 'Нет заказов'}</p>`;
+                renderOrdersPagination(0, 1, 1);
+                return;
+            }
+
+            const start = (ordersPage - 1) * ORDERS_PAGE_SIZE;
+            const pageItems = list.slice(start, start + ORDERS_PAGE_SIZE);
+
+            el.innerHTML = pageItems.map(o => {
+                const statusClass = 'status-' + String(o.status).replace(/\s/g, '-');
+                return `
                 <div class="order-card">
                     <div class="order-card-header">
                         <div>
                             <strong>Заказ #${o.id}</strong>
-                            <span class="status-badge status-${o.status.replace(/\s/g,'-')}">${o.status}</span>
+                            <span class="status-badge ${statusClass}">${esc(o.status)}</span>
+                            <div class="order-time"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px;">schedule</span> Время заказа: ${esc(formatOrderDateTime(o))}</div>
                         </div>
                         <button type="button" class="btn-view" onclick="viewOrder(${o.id})">Подробнее</button>
                     </div>
-                    <p>${o.user_name || '—'} · ${o.user_phone || '—'}</p>
-                    <p>${o.order_date} ${o.order_time} · ${Number(o.total).toFixed(2)} BYN · ${o.items_count || 0} поз.</p>
-                    <p style="font-size:13px;color:#7a5a4a;">${o.comment || 'Без комментария'}</p>
-                </div>
-            `).join('');
+                    <p>${esc(o.user_name || '—')} · ${esc(o.user_phone || '—')}</p>
+                    <p>${Number(o.total).toFixed(2)} BYN · ${o.items_count || 0} поз.</p>
+                    <p style="font-size:13px;color:#7a5a4a;">${esc(o.comment || 'Без комментария')}</p>
+                </div>`;
+            }).join('');
+
+            renderOrdersPagination(list.length, ordersPage, totalPages);
+        }
+
+        async function loadOrders() {
+            const el = document.getElementById('ordersList');
+            try {
+                const res = await fetch(API + '/admin/orders', { headers: { Authorization: 'Bearer ' + token } });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (res.status === 401 || res.status === 403) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/employee/login.html';
+                        return;
+                    }
+                    throw new Error(data.error || 'Не удалось загрузить заказы');
+                }
+                allOrders = Array.isArray(data) ? data : [];
+                ordersPage = 1;
+                renderOrders();
+            } catch (err) {
+                console.error('Ошибка загрузки заказов:', err);
+                allOrders = [];
+                if (el) {
+                    el.innerHTML = '<p style="text-align:center;padding:40px;color:#7a5a4a;">Не удалось загрузить заказы. Войдите снова или перезапустите сервер.</p>';
+                }
+                document.getElementById('ordersPagination').innerHTML = '';
+            }
         }
 
         async function viewOrder(id) {
             const res = await fetch(API + '/admin/orders/' + id, { headers: { Authorization: 'Bearer ' + token } });
-            if (!res.ok) { alert('Не удалось загрузить заказ'); return; }
+            if (!res.ok) {
+                alert('Не удалось загрузить заказ');
+                return;
+            }
             const o = await res.json();
             document.getElementById('detailBody').innerHTML = `
                 <h3 style="margin-bottom:12px;">Заказ #${o.id}</h3>
-                <p><strong>Статус:</strong> ${o.status}</p>
-                <p><strong>Клиент:</strong> ${o.user_name || '—'}</p>
-                <p><strong>Телефон:</strong> ${o.user_phone || '—'}</p>
-                <p><strong>Дата:</strong> ${o.order_date} ${o.order_time}</p>
-                <p><strong>Оплата:</strong> ${o.payment_method || '—'}</p>
+                <p><strong>Статус:</strong> ${esc(o.status)}</p>
+                <p><strong>Клиент:</strong> ${esc(o.user_name || '—')}</p>
+                <p><strong>Телефон:</strong> ${esc(o.user_phone || '—')}</p>
+                <p><strong>Время заказа:</strong> ${esc(formatOrderDateTime(o))}</p>
+                <p><strong>Оплата:</strong> ${esc(o.payment_method || '—')}</p>
                 <p><strong>Итого:</strong> ${Number(o.total).toFixed(2)} BYN</p>
-                ${o.comment ? '<p><strong>Комментарий:</strong> ' + o.comment + '</p>' : ''}
+                ${o.comment ? '<p><strong>Комментарий:</strong> ' + esc(o.comment) + '</p>' : ''}
                 <table>
                     <tr><th>Позиция</th><th>Кол-во</th><th>Цена</th></tr>
-                    ${(o.items || []).map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${Number(i.price_at_time).toFixed(2)} BYN</td></tr>`).join('')}
+                    ${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td>${i.quantity}</td><td>${Number(i.price_at_time).toFixed(2)} BYN</td></tr>`).join('')}
                 </table>
                 <button type="button" class="btn-view" style="margin-top:16px;width:100%;" onclick="closeDetail()">Закрыть</button>
             `;
@@ -143,8 +418,12 @@
             document.getElementById('detailModal').classList.remove('open');
         }
 
-        if (!token) location.href = '/employee/login.html';
-        else loadOrders();
+        if (!token) {
+            location.href = '/employee/login.html';
+        } else {
+            renderStatusTabs();
+            loadOrders();
+        }
     </script>
 </body>
 </html>

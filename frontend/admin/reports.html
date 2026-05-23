@@ -4,144 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Отчёты и аналитика</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <script src="../shared/zerno-dialog.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../shared/zerno-utils.js"></script>
     
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f0e8;
-            color: #2c1810;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: #2c1810;
-            color: #e8d5b5;
-            padding: 15px 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
+        .panel-head {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .back-btn {
-            background: #e8d5b5;
-            color: #2c1810;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background 0.2s, color 0.2s;
+        .form-panel .panel-head h2,
+        .form-panel .panel-head .section-title {
+            margin: 0;
+            padding: 0;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1;
         }
 
-        .back-btn:hover {
-            background: #2c1810;
-            color: #e8d5b5;
-            border: 1px solid #e8d5b5;
+        .panel-head .btn-primary {
+            flex-shrink: 0;
+            margin: 0;
         }
 
-        .dashboard-controls {
-            background: white;
-            padding: 20px;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            border: 1px solid #e0d0c0;
+        .menu-toolbar {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
             justify-content: space-between;
             align-items: flex-end;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
         }
 
-        .filter-section, .export-section {
+        .menu-toolbar-left,
+        .menu-toolbar-right {
             display: flex;
-            gap: 15px;
             flex-wrap: wrap;
             align-items: flex-end;
+            gap: 14px;
         }
 
-        .export-section {
-            border-left: 2px solid #f5f0e8;
-            padding-left: 20px;
+        .menu-toolbar-left {
+            flex: 1 1 280px;
         }
 
-        @media (max-width: 900px) {
-            .export-section {
-                border-left: none;
-                padding-left: 0;
-                border-top: 2px solid #f5f0e8;
-                padding-top: 20px;
-                width: 100%;
-            }
+        .menu-toolbar-right {
+            margin-left: auto;
+            justify-content: flex-end;
         }
 
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+        .menu-toolbar label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .menu-toolbar select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            min-width: 200px;
+            background: #faf9f6;
+            color: var(--text-dark);
         }
 
         .filter-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-dark);
+            background: #faf9f6;
+            box-sizing: border-box;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(82, 52, 38, 0.08);
+        }
+
+        .btn-apply {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .filter-apply-btn {
+            align-self: flex-end;
+            flex-shrink: 0;
+        }
+
+        .export-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-export-excel,
+        .btn-export-pdf {
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
             font-weight: 600;
             font-size: 14px;
-            color: #7a7065;
-        }
-
-        .filter-group input, .filter-group select {
-            padding: 10px;
-            border: 2px solid #e0d0c0;
-            border-radius: 12px;
             font-family: inherit;
-            color: #2c1810;
-            outline: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+            color: #fff;
         }
 
-        .btn {
-            padding: 10px 25px;
-            border-radius: 30px;
-            cursor: pointer;
-            border: none;
-            font-weight: 600;
-            font-family: inherit;
-            transition: opacity 0.2s, transform 0.1s;
+        .btn-export-excel {
+            background: #2e7d32;
         }
 
-        .btn:active { transform: scale(0.98); }
-        .btn-primary { background: #2c1810; color: white; }
-        .btn-primary:hover { background: #4a3319; }
-        .btn-excel { background: #28a745; color: white; }
-        .btn-excel:hover { background: #218838; }
-        .btn-pdf { background: #dc3545; color: white; }
-        .btn-pdf:hover { background: #c82333; }
+        .btn-export-excel:hover {
+            background: #256b29;
+        }
 
-        /* Сетка отчетов на экране */
+        .btn-export-pdf {
+            background: var(--danger);
+        }
+
+        .btn-export-pdf:hover {
+            background: #b02a37;
+        }
+
         .reports-grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            gap: 25px;
+            gap: 20px;
         }
 
         .report-card {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid #e0d0c0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
             display: flex;
             flex-direction: column;
-            page-break-inside: avoid; /* Предотвращает разрыв карточки посреди страницы в PDF */
+            page-break-inside: avoid;
         }
 
         .col-4 { grid-column: span 12; }
@@ -153,41 +191,120 @@
             .col-6 { grid-column: span 6; }
         }
 
-        .report-card h3 {
-            color: #2c1810;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e0d0c0;
-            font-size: 16px;
+        .report-card > h3 {
+            color: var(--text-dark);
+            margin: 0 0 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .stat-number {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2c1810;
+            font-size: clamp(1.5rem, 3vw, 1.75rem);
+            font-weight: 600;
+            color: var(--text-dark);
+            line-height: 1.2;
         }
 
-        table {
+        .report-card .stat-hint {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .report-card table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
         }
 
-        th, td {
-            padding: 10px 8px;
+        .report-card th,
+        .report-card td {
+            padding: 10px 12px;
             text-align: left;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
         }
 
-        th {
-            background: #f5f0e8;
+        .report-card td.num,
+        .report-card th.num {
+            text-align: right;
+        }
+
+        .report-card th {
+            background: #faf9f6;
             font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .report-card tr:last-child td {
+            border-bottom: none;
         }
 
         .chart-container {
             position: relative;
             height: 320px;
             width: 100%;
+        }
+
+        .chart-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .chart-toolbar .chart-title {
+            margin: 0;
+            padding: 0;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .chart-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .chart-period-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .chart-period-filters .tab {
+            margin: 0;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .chart-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .chart-legend-swatch {
+            display: inline-block;
+            width: 28px;
+            height: 4px;
+            background: #2d2418;
+            border-radius: 2px;
         }
 
         /* Специальные стили исключительно для красивой печати PDF */
@@ -234,111 +351,140 @@
         .pdf-table .num { text-align: right; }
     </style>
 </head>
-<body>
+<body class="zerno-panel">
 
     <div class="container">
         <div class="header">
-            <h2>Отчёты и аналитика</h2>
-            <a href="index.html" class="back-btn">← На главную</a>
+            <h2><span class="material-symbols-rounded">analytics</span> Отчёты и аналитика</h2>
+            <a href="index.html" class="back-btn"><span class="material-symbols-rounded" style="font-size:18px;">arrow_back</span> На главную</a>
         </div>
 
-        <div class="dashboard-controls">
-            <div class="filter-section">
-                <div class="filter-group">
-                    <label>С какой даты</label>
-                    <input type="date" id="dateFrom">
-                </div>
-                <div class="filter-group">
-                    <label>По какую дату</label>
-                    <input type="date" id="dateTo">
-                </div>
-                <button class="btn btn-primary" onclick="loadAllReports()">Применить фильтр</button>
+        <div class="form-panel">
+            <div class="panel-head">
+                <h2 class="section-title"><span class="material-symbols-rounded">insights</span> Показатели за период</h2>
             </div>
 
-            <div class="export-section">
-                <div class="filter-group">
-                    <label>Категория отчёта</label>
-                    <select id="exportCategory">
-                        <option value="all">Все отчёты (Единый)</option>
-                        <option value="orders">Количество заказов</option>
-                        <option value="revenue">Выручка за период</option>
-                        <option value="avg_check">Средний чек</option>
-                        <option value="popular">Популярные позиции</option>
-                        <option value="canceled">Отменённые заказы</option>
-                        <option value="new_users">Новые пользователи</option>
-                        <option value="tables">Загруженность столов</option>
-                        <option value="dynamics">Динамика продаж</option>
-                    </select>
+            <div class="menu-toolbar">
+                <div class="menu-toolbar-left">
+                    <div class="filter-group">
+                        <label for="dateFrom">С даты</label>
+                        <input type="date" id="dateFrom">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateTo">По дату</label>
+                        <input type="date" id="dateTo">
+                    </div>
+                    <button type="button" class="btn-primary btn-apply filter-apply-btn" onclick="loadAllReports()">Применить фильтр</button>
                 </div>
-                <div class="filter-group" style="flex-direction: row; gap: 10px;">
-                    <button class="btn btn-excel" onclick="exportData('excel')">в Excel</button>
-                    <button class="btn btn-pdf" onclick="exportData('pdf')">в PDF</button>
+                <div class="menu-toolbar-right">
+                    <div class="filter-group">
+                        <label for="exportCategory">Экспорт</label>
+                        <select id="exportCategory">
+                            <option value="all">Все отчёты</option>
+                            <option value="orders">Количество заказов</option>
+                            <option value="revenue">Выручка за период</option>
+                            <option value="avg_check">Средний чек</option>
+                            <option value="popular">Популярные позиции</option>
+                            <option value="canceled">Отменённые заказы</option>
+                            <option value="new_users">Новые пользователи</option>
+                            <option value="tables">Загруженность столов</option>
+                            <option value="dynamics">Динамика продаж</option>
+                        </select>
+                    </div>
+                    <div class="export-actions">
+                        <button type="button" class="btn-export-excel" onclick="exportData('excel')">
+                            <span class="material-symbols-rounded" style="font-size:18px;">table</span> Excel
+                        </button>
+                        <button type="button" class="btn-export-pdf" onclick="exportData('pdf')">
+                            <span class="material-symbols-rounded" style="font-size:18px;">picture_as_pdf</span> PDF
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="pdfTableDocument"></div>
+            <div id="pdfTableDocument"></div>
 
-        <div id="pdfExportWrapper">
-        <div id="pdfHeaderTemplate" class="pdf-header">
-            <h1>Отчёт аналитики сети Zerno</h1>
-            <p id="pdfPeriodText">Период: </p>
-        </div>
+            <div id="pdfExportWrapper">
+            <div id="pdfHeaderTemplate" class="pdf-header">
+                <h1>Отчёт аналитики сети Zerno</h1>
+                <p id="pdfPeriodText">Период: </p>
+            </div>
 
-        <div class="reports-grid" id="printableArea">
+            <div class="reports-grid" id="printableArea">
             
             <div class="report-card col-4" data-category="orders">
-                <h3>Количество заказов за период</h3>
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">shopping_bag</span> Количество заказов</h3>
                 <div id="ordersCount" class="stat-number">—</div>
-                <p style="margin-top:10px;" id="ordersCountDetail"></p>
+                <p class="stat-hint" id="ordersCountDetail"></p>
             </div>
 
             <div class="report-card col-4" data-category="revenue">
-                <h3>Выручка за период</h3>
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">payments</span> Выручка за период</h3>
                 <div id="revenue" class="stat-number">—</div>
-                <p style="margin-top:10px;" id="revenueDetail"></p>
+                <p class="stat-hint" id="revenueDetail"></p>
             </div>
 
             <div class="report-card col-4" data-category="avg_check">
-                <h3>Средний чек</h3>
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">receipt</span> Средний чек</h3>
                 <div id="avgCheck" class="stat-number">—</div>
             </div>
 
             <div class="report-card col-12" data-category="dynamics">
-                <h3>Динамика продаж по дням</h3>
+                <div class="chart-toolbar">
+                    <h3 class="chart-title" id="chartTitle">Динамика продаж по дням</h3>
+                    <div class="chart-controls">
+                        <div class="chart-period-filters tabs">
+                            <button type="button" class="tab active" data-granularity="day" onclick="setChartGranularity('day')">Дни</button>
+                            <button type="button" class="tab" data-granularity="month" onclick="setChartGranularity('month')">Месяцы</button>
+                            <button type="button" class="tab" data-granularity="quarter" onclick="setChartGranularity('quarter')">Кварталы</button>
+                        </div>
+                        <div class="chart-legend" aria-hidden="true">
+                            <span class="chart-legend-swatch"></span>
+                            <span>Выручка (BYN)</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="salesChart"></canvas>
                 </div>
             </div>
 
-            <div class="report-card col-6" data-category="popular">
-                <h3>Топ-5 популярных позиций</h3>
-                <div id="popularItems"><p>Загрузка...</p></div>
-            </div>
-
-            <div class="report-card col-6" data-category="canceled">
-                <h3>Отменённые заказы</h3>
-                <div id="canceledOrders"></div>
-            </div>
-
             <div class="report-card col-6" data-category="new_users">
-                <h3>Новые пользователи</h3>
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">person_add</span> Новые пользователи</h3>
                 <div id="newUsers" class="stat-number">—</div>
             </div>
 
-            <div class="report-card col-6" data-category="tables">
-                <h3>Загруженность столов</h3>
-                <div id="tablesLoad"><p>Загрузка...</p></div>
+            <div class="report-card col-6" data-category="canceled">
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">cancel</span> Отменённые заказы</h3>
+                <div id="canceledOrders"></div>
             </div>
-        </div>
+
+            <div class="report-card col-6" data-category="popular">
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">star</span> Топ-5 популярных позиций</h3>
+                <div id="popularItems"><p class="stat-hint">Загрузка…</p></div>
+            </div>
+
+            <div class="report-card col-6" data-category="tables">
+                <h3><span class="material-symbols-rounded" style="font-size:20px;">table_restaurant</span> Загруженность столов</h3>
+                <div id="tablesLoad"><p class="stat-hint">Загрузка…</p></div>
+            </div>
+            </div>
+            </div>
         </div>
     </div>
 
     <script>
-        const API = 'http://localhost:3000/api';
+        const API = '/api';
         let token = localStorage.getItem('token');
         let currentData = {};
         let myChart = null;
+        let chartGranularity = 'day';
+
+        const CHART_TITLES = {
+            day: 'Динамика продаж по дням',
+            month: 'Динамика продаж по месяцам',
+            quarter: 'Динамика продаж по кварталам'
+        };
 
         function getDates() {
             return {
@@ -408,7 +554,7 @@
 
             document.getElementById('canceledOrders').innerHTML = `
                 <div class="stat-number">${data.canceled_count || 0}</div>
-                <p>Отменённых заказов за период</p>
+                <p class="stat-hint">Отменённых заказов за период</p>
             `;
 
             document.getElementById('newUsers').innerHTML = data.new_users_count || 0;
@@ -431,22 +577,86 @@
                 document.getElementById('tablesLoad').innerHTML = '<p>Нет данных</p>';
             }
 
-            buildChart(data.sales_dynamics || []);
+            buildChart();
         }
 
-        function buildChart(dynamics) {
+        function getDailyRevenueRows() {
+            return [...(currentData.sales_dynamics || [])].sort((a, b) =>
+                String(a.date).localeCompare(String(b.date))
+            );
+        }
+
+        function formatChartLabel(key, granularity) {
+            if (granularity === 'day') return key;
+            if (granularity === 'month') {
+                const [y, m] = key.split('-');
+                const d = new Date(Number(y), Number(m) - 1, 1);
+                return d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+            }
+            if (granularity === 'quarter') {
+                const [y, qPart] = key.split('-');
+                const q = qPart.replace('Q', '');
+                return `${q} кв. ${y}`;
+            }
+            return key;
+        }
+
+        function aggregateDynamics(rows, granularity) {
+            const map = new Map();
+            rows.forEach((row) => {
+                const raw = String(row.date).slice(0, 10);
+                const d = new Date(raw + 'T12:00:00');
+                if (Number.isNaN(d.getTime())) return;
+
+                let key;
+                if (granularity === 'month') {
+                    key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                } else if (granularity === 'quarter') {
+                    const q = Math.floor(d.getMonth() / 3) + 1;
+                    key = `${d.getFullYear()}-Q${q}`;
+                } else {
+                    key = raw;
+                }
+
+                if (!map.has(key)) {
+                    map.set(key, { key, orders_count: 0, revenue: 0 });
+                }
+                const agg = map.get(key);
+                agg.orders_count += Number(row.orders_count) || 0;
+                agg.revenue += Number(row.revenue) || 0;
+            });
+            return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
+        }
+
+        function getChartDynamicsRows() {
+            return aggregateDynamics(getDailyRevenueRows(), chartGranularity);
+        }
+
+        function setChartGranularity(granularity) {
+            chartGranularity = granularity;
+            document.querySelectorAll('.chart-period-filters .tab').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.granularity === granularity);
+            });
+            const titleEl = document.getElementById('chartTitle');
+            if (titleEl) titleEl.textContent = CHART_TITLES[granularity] || CHART_TITLES.day;
+            buildChart();
+        }
+
+        function buildChart() {
             const ctx = document.getElementById('salesChart').getContext('2d');
             if (myChart) { myChart.destroy(); }
 
-            const sortedDynamics = [...dynamics].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const aggregated = getChartDynamicsRows();
+            const labels = aggregated.map((d) => formatChartLabel(d.key, chartGranularity));
+            const revenues = aggregated.map((d) => Number(d.revenue) || 0);
 
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: sortedDynamics.map(d => d.date),
+                    labels,
                     datasets: [{
                         label: 'Выручка (BYN)',
-                        data: sortedDynamics.map(d => d.revenue),
+                        data: revenues,
                         borderColor: '#2c1810',
                         backgroundColor: 'rgba(44, 24, 16, 0.05)',
                         borderWidth: 3,
@@ -458,7 +668,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { labels: { color: '#2c1810', font: { family: 'Segoe UI' } } }
+                        legend: { display: false }
                     },
                     scales: {
                         y: { beginAtZero: true, ticks: { color: '#2c1810' } },
@@ -487,18 +697,37 @@
             ];
 
             if (category === 'all' || category === 'orders') wsData.push(['1. Количество заказов', currentData.orders_count || 0]);
-            if (category === 'all' || category === 'revenue') wsData.push(['2. Выручка (BYN)', currentData.revenue || 0]);
+            if (category === 'all' || category === 'revenue') {
+                wsData.push(['2. Выручка за период (BYN)', currentData.revenue || 0]);
+                const daily = getDailyRevenueRows();
+                if (daily.length) {
+                    wsData.push([], ['Выручка по дням'], ['Дата', 'Выручка (BYN)', 'Заказов']);
+                    daily.forEach((row) => {
+                        wsData.push([row.date, Number(row.revenue || 0).toFixed(2), row.orders_count || 0]);
+                    });
+                }
+            }
             if (category === 'all' || category === 'avg_check') wsData.push(['3. Средний чек (BYN)', currentData.avg_check || 0]);
             if (category === 'all' || category === 'canceled') wsData.push(['4. Отменённые заказы', currentData.canceled_count || 0]);
             if (category === 'all' || category === 'new_users') wsData.push(['5. Новые пользователи', currentData.new_users_count || 0]);
-            
+
             if ((category === 'all' || category === 'popular') && currentData.popular_items) {
                 wsData.push([], ['6. ТОП-5 популярных позиций'], ['Название', 'Количество продаж']);
                 currentData.popular_items.forEach(i => wsData.push([i.name, i.total_quantity]));
             }
-            if ((category === 'all' || category === 'dynamics') && currentData.sales_dynamics) {
-                wsData.push([], ['7. Динамика продаж по дням'], ['Дата', 'Кол-во заказов', 'Выручка (BYN)']);
-                currentData.sales_dynamics.forEach(d => wsData.push([d.date, d.orders_count, d.revenue]));
+            if (category === 'all' || category === 'dynamics') {
+                const dynRows = getChartDynamicsRows();
+                const dynTitle = CHART_TITLES[chartGranularity] || CHART_TITLES.day;
+                if (dynRows.length) {
+                    wsData.push([], [dynTitle], ['Период', 'Кол-во заказов', 'Выручка (BYN)']);
+                    dynRows.forEach((d) => {
+                        wsData.push([
+                            formatChartLabel(d.key, chartGranularity),
+                            d.orders_count || 0,
+                            Number(d.revenue || 0).toFixed(2)
+                        ]);
+                    });
+                }
             }
             if ((category === 'all' || category === 'tables') && currentData.tables_load) {
                 wsData.push([], ['8. Загруженность столов'], ['Стол #', 'Вместимость', 'Броней', 'Загруженность %']);
@@ -527,14 +756,33 @@
 
             const show = (cat) => category === 'all' || category === cat;
 
-            if (show('orders') || show('revenue') || show('avg_check') || show('canceled') || show('new_users')) {
+            if (show('orders') || (show('revenue') && category !== 'revenue') || show('avg_check') || show('canceled') || show('new_users')) {
                 html += `<div class="pdf-section"><h3>Сводные показатели</h3><table class="pdf-table"><thead><tr><th>Показатель</th><th class="num">Значение</th></tr></thead><tbody>`;
                 if (show('orders')) html += `<tr><td>Количество заказов</td><td class="num">${d.orders_count || 0}</td></tr>`;
-                if (show('revenue')) html += `<tr><td>Выручка (BYN)</td><td class="num">${(d.revenue || 0).toFixed(2)}</td></tr>`;
+                if (show('revenue') && category !== 'revenue') html += `<tr><td>Выручка за период (BYN)</td><td class="num">${(d.revenue || 0).toFixed(2)}</td></tr>`;
                 if (show('avg_check')) html += `<tr><td>Средний чек (BYN)</td><td class="num">${(d.avg_check || 0).toFixed(2)}</td></tr>`;
                 if (show('canceled')) html += `<tr><td>Отменённые заказы</td><td class="num">${d.canceled_count || 0}</td></tr>`;
                 if (show('new_users')) html += `<tr><td>Новые пользователи</td><td class="num">${d.new_users_count || 0}</td></tr>`;
                 html += `</tbody></table></div>`;
+            }
+
+            if (show('revenue')) {
+                const daily = getDailyRevenueRows();
+                const dailyTable = daily.length
+                    ? `<table class="pdf-table"><thead><tr><th>Дата</th><th class="num">Заказов</th><th class="num">Выручка (BYN)</th></tr></thead><tbody>
+                        ${daily.map((row) => `<tr><td>${row.date}</td><td class="num">${row.orders_count || 0}</td><td class="num">${Number(row.revenue || 0).toFixed(2)}</td></tr>`).join('')}
+                        </tbody></table>`
+                    : '<p style="color:#7a7065;">Нет данных по дням</p>';
+
+                if (category === 'revenue') {
+                    html += `<div class="pdf-section"><h3>Выручка за период</h3>
+                        <table class="pdf-table"><thead><tr><th>Показатель</th><th class="num">Значение</th></tr></thead><tbody>
+                        <tr><td>Итого за период (BYN)</td><td class="num">${(d.revenue || 0).toFixed(2)}</td></tr>
+                        </tbody></table>
+                        <h3 style="font-size:14px;margin:16px 0 8px;color:#2c1810;">Выручка по дням</h3>${dailyTable}</div>`;
+                } else if (category === 'all' && daily.length) {
+                    html += `<div class="pdf-section"><h3>Выручка по дням</h3>${dailyTable}</div>`;
+                }
             }
 
             if (show('popular') && d.popular_items && d.popular_items.length) {
@@ -544,12 +792,15 @@
                     </tbody></table></div>`;
             }
 
-            if (show('dynamics') && d.sales_dynamics && d.sales_dynamics.length) {
-                const sorted = [...d.sales_dynamics].sort((a, b) => new Date(a.date) - new Date(b.date));
-                html += `<div class="pdf-section"><h3>Динамика продаж по дням</h3>
-                    <table class="pdf-table"><thead><tr><th>Дата</th><th class="num">Заказов</th><th class="num">Выручка (BYN)</th></tr></thead><tbody>
-                    ${sorted.map(row => `<tr><td>${row.date}</td><td class="num">${row.orders_count || 0}</td><td class="num">${Number(row.revenue || 0).toFixed(2)}</td></tr>`).join('')}
-                    </tbody></table></div>`;
+            if (show('dynamics')) {
+                const dynRows = getChartDynamicsRows();
+                const dynTitle = CHART_TITLES[chartGranularity] || CHART_TITLES.day;
+                if (dynRows.length) {
+                    html += `<div class="pdf-section"><h3>${dynTitle}</h3>
+                        <table class="pdf-table"><thead><tr><th>Период</th><th class="num">Заказов</th><th class="num">Выручка (BYN)</th></tr></thead><tbody>
+                        ${dynRows.map((row) => `<tr><td>${formatChartLabel(row.key, chartGranularity)}</td><td class="num">${row.orders_count || 0}</td><td class="num">${Number(row.revenue || 0).toFixed(2)}</td></tr>`).join('')}
+                        </tbody></table></div>`;
+                }
             }
 
             if (show('tables') && d.tables_load && d.tables_load.length) {
@@ -559,7 +810,7 @@
                     </tbody></table></div>`;
             }
 
-            return html.replace(/<\/?motion\.div/g, m => m.replace('motion.', ''));
+            return html;
         }
 
         function generatePDF(category) {

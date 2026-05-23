@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Кофейня</title>
     <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <link rel="stylesheet" href="../shared/floor-plan.css">
     <script src="../shared/zerno-utils.js"></script>
     <script src="../shared/zerno-dialog.js"></script>
+    <script src="../shared/floor-plan.js"></script>
+    <script src="../shared/client-booking.js"></script>
     <link rel="stylesheet" href="client.css">
 </head>
-<body>
+<body class="zerno-client">
     <!-- Успешное сообщение -->
     <div class="success-toast" id="successToast"></div>
 
-    <div class="hero" id="home">
+    <div class="hero hero--photo" id="home">
+        <div class="hero-overlay" aria-hidden="true"></div>
         <div class="hero-content">
             <h1>Zerno</h1>
             <p>Кофейня — свежий кофе, домашняя выпечка и уютная атмосфера</p>
@@ -27,15 +31,26 @@
             <div class="search-container">
                 <span class="material-symbols-rounded search-icon icon-sm">search</span>
                 <input type="text" class="search-input" id="searchInput" placeholder="Поиск блюда..." oninput="handleSearch()" onfocus="showSearchResults()" onblur="hideSearchResultsDelayed()">
+                <button type="button" class="search-filter-btn" id="searchFilterBtn" onclick="toggleSearchFilters(event)" title="Фильтры поиска" aria-expanded="false">
+                    <span class="material-symbols-rounded icon-sm">tune</span>
+                </button>
                 <div class="search-results" id="searchResults"></div>
-                <div class="search-panel" id="searchFilters">
-                    <div class="filter-bar" style="margin:0;padding:0;border:none;background:transparent;">
+                <div class="search-panel" id="searchFiltersPanel">
+                    <p class="search-panel-title">Фильтры поиска</p>
+                    <div class="filter-bar filter-bar--compact">
+                        <label class="filter-label">Категория</label>
                         <select id="searchCategory" onchange="handleSearch()"><option value="">Все категории</option></select>
+                        <label class="filter-label">Цена от</label>
+                        <input type="number" id="searchPriceMin" min="0" step="0.01" placeholder="0" oninput="clampPriceInput(this); handleSearch()">
+                        <label class="filter-label">Цена до</label>
+                        <input type="number" id="searchPriceMax" min="0" step="0.01" placeholder="∞" oninput="clampPriceInput(this); handleSearch()">
+                        <label class="filter-label">Сортировка</label>
                         <select id="searchSort" onchange="handleSearch()">
-                            <option value="">Без сортировки</option>
-                            <option value="price_asc">Цена ↑</option>
-                            <option value="price_desc">Цена ↓</option>
-                            <option value="popularity">Популярность</option>
+                            <option value="">По умолчанию</option>
+                            <option value="price_asc">Цена: по возрастанию</option>
+                            <option value="price_desc">Цена: по убыванию</option>
+                            <option value="popularity_asc">Популярность: по возрастанию</option>
+                            <option value="popularity_desc">Популярность: по убыванию</option>
                         </select>
                     </div>
                 </div>
@@ -45,6 +60,7 @@
             <a onclick="scrollToCatalog()">Меню</a>
             <a onclick="scrollToHowTo()">Как заказать</a>
             <a onclick="scrollToLocations()">Кофейни</a>
+            <a onclick="openBookingModal()">Бронирование</a>
             <div class="icon-btn cart-icon" onclick="toggleCart()" title="Корзина" style="position:relative;">
                 <span class="material-symbols-rounded">shopping_cart</span>
                 <span class="cart-count" id="cartCount">0</span>
@@ -76,45 +92,89 @@
         <span>Товар добавлен в корзину</span>
     </div>
 
+    <section class="popular-section" id="popularSection">
+        <div class="container">
+            <h2 class="section-title">Популярные товары</h2>
+            <p class="section-subtitle section-subtitle--center">То, что гости заказывают чаще всего</p>
+            <div class="popular-scroll-wrap">
+                <div class="popular-scroll" id="popularScroll"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="why-us-section" id="whyUs">
+        <div class="container">
+            <h2 class="section-title">Почему выбирают нас</h2>
+            <div class="why-us-grid">
+                <article class="why-us-item">
+                    <h3 class="why-us-title">Уютная атмосфера</h3>
+                    <div class="why-us-photo">
+                        <img src="assets/cozy.jpg" alt="Уютная атмосфера в кофейне Zerno" loading="lazy">
+                    </div>
+                </article>
+                <article class="why-us-item">
+                    <h3 class="why-us-title">Свежий кофе</h3>
+                    <div class="why-us-photo">
+                        <img src="assets/fresh_coffee.jpg" alt="Свежий кофе в Zerno" loading="lazy">
+                    </div>
+                </article>
+                <article class="why-us-item">
+                    <h3 class="why-us-title">Вкусный выбор десертов</h3>
+                    <div class="why-us-photo">
+                        <img src="assets/cake.jpg" alt="Десерты в кофейне Zerno" loading="lazy">
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
     <div class="catalog-section" id="catalog">
         <div class="container">
             <h2 class="section-title">Наше меню</h2>
-            <div class="categories-grid" id="categoriesGrid"></div>
-        </div>
-    </div>
-
-    <div class="products-section" id="productsSection">
-        <div class="container">
-            <button class="back-btn" onclick="showCatalog()">← Назад к категориям</button>
-            <h2 class="section-title" id="categoryTitle"></h2>
-            <div class="filter-bar" id="categoryFilters">
-                <span style="font-weight:600;font-size:14px;color:#2d2418;">Фильтры:</span>
-                <select id="catMaxPrice" onchange="applyCategoryFilters()" title="Цена до">
-                    <option value="">Любая цена</option>
-                    <option value="5">До 5 BYN</option>
-                    <option value="8">До 8 BYN</option>
-                    <option value="12">До 12 BYN</option>
-                    <option value="20">До 20 BYN</option>
-                </select>
-                <select id="catSort" onchange="applyCategoryFilters()" title="Сортировка">
+            <div class="filter-bar" id="catalogFilters">
+                <label class="filter-label">Категория</label>
+                <select id="catalogFilterCategory" onchange="onCatalogFilterCategoryChange()"><option value="">Все категории</option></select>
+                <label class="filter-label">Цена от</label>
+                <input type="number" id="catalogPriceMin" min="0" step="0.01" placeholder="0" oninput="clampPriceInput(this); applyCatalogFilters()">
+                <label class="filter-label">Цена до</label>
+                <input type="number" id="catalogPriceMax" min="0" step="0.01" placeholder="∞" oninput="clampPriceInput(this); applyCatalogFilters()">
+                <label class="filter-label">Сортировка</label>
+                <select id="catalogSort" onchange="applyCatalogFilters()">
                     <option value="">По умолчанию</option>
                     <option value="price_asc">Цена: по возрастанию</option>
                     <option value="price_desc">Цена: по убыванию</option>
-                    <option value="popularity">По популярности</option>
+                    <option value="popularity_asc">Популярность: по возрастанию</option>
+                    <option value="popularity_desc">Популярность: по убыванию</option>
                 </select>
+                <button type="button" class="btn-outline filter-reset-btn" onclick="resetCatalogFilters()">Сбросить</button>
             </div>
-            <div class="menu-grid" id="productsGrid"></div>
+            <div id="catalogCategoriesView">
+                <h3 class="catalog-subheading">Категории</h3>
+                <div class="categories-grid" id="categoriesGrid"></div>
+            </div>
+            <div id="catalogProductsView" class="catalog-products-view" hidden>
+                <div class="catalog-products-header">
+                    <button type="button" class="catalog-back-btn" id="catalogBackBtn" onclick="showCatalogCategories()">
+                        <span class="material-symbols-rounded">arrow_back</span> К категориям
+                    </button>
+                    <h3 class="catalog-subheading" id="catalogResultsTitle"></h3>
+                </div>
+                <div class="menu-grid" id="catalogMenuGrid"></div>
+            </div>
         </div>
     </div>
 
     <div class="how-to-order" id="howToOrder">
         <div class="container">
             <h2 class="section-title">Как заказать?</h2>
-            <div class="steps-grid">
+            <div class="steps-flow">
                 <div class="step-card"><div class="step-number">1</div><h3>Выбираем</h3><p>Выберите кофе и десерты в меню</p></div>
-                <div class="step-card"><div class="step-number">2</div><h3>Проверяем</h3><p>Проверьте корзину</p></div>
-                <div class="step-card"><div class="step-number">3</div><h3>Заказываем</h3><p>Выберите дату и время</p></div>
-                <div class="step-card"><div class="step-number">4</div><h3>Получаем</h3><p>Заберите заказ в кофейне</p></div>
+                
+                <span class="step-arrow material-symbols-rounded" aria-hidden="true">arrow_forward</span><div class="step-card"><div class="step-number">2</div><h3>Проверяем</h3><p>Проверьте корзину</p></div>
+                
+                <span class="step-arrow material-symbols-rounded" aria-hidden="true">arrow_forward</span><div class="step-card"><div class="step-number">3</div><h3>Заказываем</h3><p>Выберите дату и время</p></div>
+                
+                <span class="step-arrow material-symbols-rounded" aria-hidden="true">arrow_forward</span><div class="step-card"><div class="step-number">4</div><h3>Получаем</h3><p>Заберите заказ в кофейне</p></div>
             </div>
         </div>
     </div>
@@ -122,15 +182,20 @@
     <div class="locations-section" id="locations">
         <div class="container">
             <h2 class="section-title">Наши кофейни</h2>
-            <div class="locations-grid" id="locationsGrid"></div>
+            <div class="location-showcase">
+                <div class="location-info" id="locationsGrid"></div>
+                <div class="location-photo-block">
+                    <img src="assets/location-zamok.jpg" alt="Кофейня Zerno в ТЦ Замок" class="location-photo" loading="lazy">
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="footer">
         <div class="footer-content">
             <div class="footer-col"><h4>Zerno</h4><p>Кофейня</p></div>
-            <div class="footer-col"><h4>Контакты</h4><p><span class="material-symbols-rounded icon-sm">call</span> +375 (44) 444-44-44<br><span class="material-symbols-rounded icon-sm">mail</span> hello@zerno.by</p></div>
-            <div class="footer-col"><h4>Время работы</h4><p>Ежедневно с 9:00 до 21:00</p></div>
+            <div class="footer-col"><h4>Контакты</h4><p><span class="material-symbols-rounded icon-sm">call</span> +375 (44) 444-44-44<br><span class="material-symbols-rounded icon-sm">mail</span> zerno.coffee.by@gmail.com</p></div>
+            <div class="footer-col"><h4>Время работы</h4><p>Ежедневно с 10:00 до 22:00</p></div>
         </div>
         <div class="footer-bottom"><p>© 2026 Zerno. Все права защищены.</p></div>
     </div>
@@ -248,99 +313,88 @@
         </div>
     </div>
 
-    <!-- Модалка бронирования столов -->
+    <!-- Модалка бронирования стола -->
     <div id="bookingModal" class="modal">
-        <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-content modal-content--wide modal-content--booking">
+            <button type="button" class="modal-close" onclick="closeBookingModal()" aria-label="Закрыть">
+                <span class="material-symbols-rounded">close</span>
+            </button>
             <h3 class="modal-title">Бронирование стола</h3>
-            
-            <div style="text-align: center; margin: 15px 0;">
-                <img src="image.png" alt="План-схема столов" 
-                     style="width: 100%; max-width: 400px; height: auto; border-radius: 16px; border: 1px solid #e8dcc8;">
-            </div>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex:1;">
-                    <label>Дата бронирования</label>
-                    <input type="date" id="bookingDate" min="">
+            <p class="modal-subtitle">Выберите стол на схеме, укажите гостей, дату, время и длительность</p>
+            <div class="booking-layout booking-modal-layout">
+                <div class="booking-floor-col">
+                    <div class="fp-floor-wrap">
+                        <p class="booking-floor-caption" id="bookingFloorNowLabel">Схема зала</p>
+                        <div class="fp-floor" id="clientBookingFloor"></div>
+                        <p class="booking-floor-empty" id="bookingFloorEmpty" hidden>Столы на схеме ещё не настроены администратором</p>
+                        <div class="booking-legend">
+                            <span class="booking-legend-item"><span class="booking-legend-dot booking-legend-dot--free"></span> Свободен на ваше время</span>
+                            <span class="booking-legend-item"><span class="booking-legend-dot booking-legend-dot--busy"></span> Занят / занят сейчас</span>
+                            <span class="booking-legend-item"><span class="booking-legend-dot booking-legend-dot--pick"></span> Выбран</span>
+                        </div>
+                        <p class="booking-floor-hint">Красный стол — занят на выбранное время (после подтверждения сотрудником). У всех столов есть розетки. Если гость не пришёл в течение 30 мин от начала брони, стол снова свободен.</p>
+                    </div>
                 </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Время бронирования</label>
-                    <select id="bookingTime">
-                        <option value="10:00">10:00</option>
-                        <option value="11:00">11:00</option>
-                        <option value="12:00">12:00</option>
-                        <option value="13:00">13:00</option>
-                        <option value="14:00">14:00</option>
-                        <option value="15:00">15:00</option>
-                        <option value="16:00">16:00</option>
-                        <option value="17:00">17:00</option>
-                        <option value="18:00">18:00</option>
-                        <option value="19:00">19:00</option>
-                        <option value="20:00">20:00</option>
-                    </select>
+                <div class="booking-panel">
+                    <div class="booking-panel-card" id="bookingTableInfo">
+                        <p class="booking-panel-hint">Нажмите на свободный стол на схеме</p>
+                    </div>
+                    <div class="booking-panel-row">
+                        <div class="form-group">
+                            <label for="bookingGuests">Гостей за столом</label>
+                            <input type="text" id="bookingGuests" readonly placeholder="Выберите стол" class="booking-guests-readonly">
+                        </div>
+                    </div>
+                    <p class="booking-outlet-note">У всех столов в зале есть розетки.</p>
+                    <div class="booking-panel-row">
+                        <div class="form-group">
+                            <label for="bookingDate">Дата бронирования</label>
+                            <input type="date" id="bookingDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="bookingTime">Время</label>
+                            <select id="bookingTime"></select>
+                        </div>
+                    </div>
+                    <div class="booking-panel-row booking-panel-row--full">
+                        <div class="form-group">
+                            <label for="bookingDuration">Длительность брони</label>
+                            <div class="booking-duration-stepper">
+                                <button type="button" class="booking-step-btn booking-step-btn--labeled" id="bookingDurationMinus" aria-label="Уменьшить на 30 минут">−30 мин</button>
+                                <span class="booking-duration-value" id="bookingDurationLabel">2 ч</span>
+                                <button type="button" class="booking-step-btn booking-step-btn--labeled" id="bookingDurationPlus" aria-label="Увеличить на 30 минут">+30 мин</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="booking-guest-note" id="bookingGuestNote">Просмотр схемы доступен без входа. Чтобы забронировать стол — войдите или зарегистрируйтесь.</p>
+                    <div class="booking-actions">
+                        <button type="button" class="btn-primary btn-full" id="bookingSubmitBtn" onclick="requestBookingSubmit()">Забронировать стол</button>
+                        <div class="booking-auth-cta" id="bookingAuthCta">
+                            <button type="button" class="btn-outline" onclick="showLoginModal()">Войти</button>
+                            <button type="button" class="btn-primary" onclick="showRegisterModal()">Регистрация</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label>Выберите стол (нажмите на свободный стол)</label>
-                <div id="tablesGrid" style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; justify-content: center;"></div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex:1;">
-                    <label>Количество гостей</label>
-                    <select id="bookingGuests" disabled>
-                        <option value="1">1 гость</option>
-                        <option value="2">2 гостя</option>
-                        <option value="3">3 гостя</option>
-                        <option value="4">4 гостя</option>
-                        <option value="5">5 гостей</option>
-                        <option value="6">6 гостей</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Выбранный стол</label>
-                    <input type="text" id="selectedTableDisplay" readonly placeholder="Не выбран" style="background:#f5f0e8;">
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn-primary" onclick="createBooking()" style="flex:1;"> Забронировать</button>
-                <button class="btn-outline" onclick="closeModal('bookingModal')" style="flex:1;">Отмена</button>
-            </div>
-            
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 20px; background: #28a745; border-radius: 4px;"></div><span>Свободен</span></div>
-                <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 20px; background: #dc3545; border-radius: 4px;"></div><span>Занят</span></div>
-                <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 20px; background: #ffc107; border-radius: 4px;"></div><span>Ожидает</span></div>
-            </div>
-            <p style="font-size: 11px; text-align: center; margin-top: 10px; color: #8a6a5a;">После подтверждения сотрудником стол будет забронирован</p>
-        </div>
-    </div>
-
-    <!-- Модалка просмотра бронирований -->
-    <div id="myBookingsModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <h3 class="modal-title">Мои бронирования</h3>
-            <div id="myBookingsList" style="max-height: 400px; overflow-y: auto;"></div>
-            <button class="btn-outline" onclick="closeModal('myBookingsModal')" style="width:100%; margin-top:20px;">Закрыть</button>
         </div>
     </div>
 
     <!-- Модальное окно подробной информации о товаре -->
     <div id="productModal" class="modal">
-        <div class="modal-content" style="max-width: 550px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 id="productModalTitle" style="color: #2c1810; margin: 0;">Товар</h3>
-                <button onclick="closeModal('productModal')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999;">&times;</button>
+        <div class="modal-content modal-content--wide product-modal">
+            <button type="button" class="modal-close" onclick="closeModal('productModal')" aria-label="Закрыть">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <div class="product-modal-layout">
+                <div class="product-modal-media" id="productModalMedia"></div>
+                <div class="product-modal-info">
+                    <h3 class="modal-title" id="productModalTitle">Товар</h3>
+                    <div id="productModalContent"></div>
+                </div>
             </div>
-            
-            <div id="productModalContent" style="display: flex; flex-direction: column; gap: 15px;">
-            </div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button class="btn-primary" id="productModalAddBtn" style="flex: 1;">Добавить в корзину</button>
-                <button class="btn-outline" onclick="closeModal('productModal')" style="flex: 1;">Закрыть</button>
+            <div class="product-modal-actions">
+                <button class="btn-primary" id="productModalAddBtn">Добавить в корзину</button>
+                <button class="btn-outline" onclick="closeModal('productModal')">Закрыть</button>
             </div>
         </div>
     </div>

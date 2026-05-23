@@ -4,34 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Панель сотрудника</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <link rel="stylesheet" href="../shared/floor-plan.css">
+    <script src="../shared/zerno-dialog.js"></script>
+    <script src="../shared/floor-plan.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f0e8;
-            color: #2c1810;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        /* Шапка панели */
-        .header {
-            background: #2c1810;
-            color: #e8d5b5;
-            padding: 20px 30px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
         
         .header-title-block {
             display: flex;
@@ -39,72 +17,18 @@
             gap: 15px;
             flex-wrap: wrap;
         }
-        
-        .header h2 {
-            font-size: 22px;
-            font-weight: 600;
-        }
-        
+
         .header a {
-            color: #e8d5b5;
+            color: var(--accent);
             text-decoration: none;
-            border-bottom: 1px dashed #e8d5b5;
+            border-bottom: 1px dashed rgba(232, 213, 181, 0.6);
             transition: opacity 0.2s;
         }
-        
+
         .header a:hover {
             opacity: 0.8;
         }
-        
-        .logout-btn {
-            background: #e8d5b5;
-            color: #2c1810;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s, color 0.2s;
-        }
-        
-        .logout-btn:hover {
-            background: #2c1810;
-            color: #e8d5b5;
-            border: 1px solid #e8d5b5;
-        }
-        
-        /* Вкладки (Табы) */
-        .tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
-        }
-        
-        .tab {
-            background: white;
-            color: #2c1810;
-            border: 1px solid #e0d0c0;
-            padding: 12px 30px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
-            font-family: inherit;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-        
-        .tab:hover {
-            background: #faf6f0;
-            border-color: #2c1810;
-        }
-        
-        .tab.active {
-            background: #2c1810;
-            color: white;
-            border-color: #2c1810;
-        }
-        
-        /* Сетка списков */
+
         .orders-grid, .bookings-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -113,8 +37,7 @@
         
         /* Карточки заказов и бронирований */
         .card {
-            background: white;
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 22px;
             border: 1px solid #e0d0c0;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -147,7 +70,7 @@
         .card-phone {
             font-size: 14px;
             color: #7a5a4a;
-            font-weight: 500;
+            font-weight: 400;
         }
         
         .card-body {
@@ -162,7 +85,7 @@
         
         .label-text {
             color: #7a7065;
-            font-weight: 500;
+            font-weight: 400;
         }
         
         .comment-text {
@@ -181,16 +104,41 @@
             margin-top: 18px;
             flex-wrap: wrap;
         }
+
+        .status-buttons--pair {
+            flex-wrap: nowrap;
+        }
+
+        .status-buttons--pair .status-btn {
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+        }
         
         .status-btn {
             padding: 8px 16px;
             border: none;
             border-radius: 30px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 400;
             font-family: inherit;
             font-size: 12px;
             transition: background 0.2s, transform 0.1s;
+        }
+
+        .status-btn--arrival {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-btn--cancel {
+            background: #fbebeb;
+            color: #dc3545;
+        }
+
+        .status-btn--confirm {
+            background: #e8f5e9;
+            color: #2e7d32;
         }
         
         .status-btn:active {
@@ -217,7 +165,7 @@
             padding: 5px 14px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 400;
             display: inline-block;
         }
         
@@ -228,9 +176,90 @@
             grid-column: 1 / -1;
             font-size: 15px;
         }
+
+        .bookings-layout {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 960px) {
+            .bookings-layout { grid-template-columns: 1fr; }
+        }
+
+        .bookings-floor-panel {
+            background: white;
+            border: 1px solid #e0d0c0;
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .floor-now-hint {
+            font-size: 13px;
+            color: #7a7065;
+            margin: 0 0 12px;
+            font-weight: 400;
+        }
+
+        .bookings-side h3 {
+            font-size: 16px;
+            margin: 0 0 14px;
+            color: #2c1810;
+        }
+
+        .bookings-subtabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .bookings-subtab {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 2px solid #e0d0c0;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 400;
+            color: #5a4a3a;
+        }
+
+        .bookings-subtab.active {
+            background: #2c1810;
+            color: #f5e6d3;
+            border-color: #2c1810;
+        }
+
+        .bookings-side .bookings-grid {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .bookings-section-hint {
+            font-size: 12px;
+            color: #7a7065;
+            margin: 0 0 12px;
+            line-height: 1.45;
+        }
+
+        .card.card-highlight {
+            border-color: #2c1810;
+            box-shadow: 0 0 0 2px rgba(44, 24, 16, 0.15);
+        }
+
+        .tab .pending-badge {
+            background: #dc3545;
+            color: white;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
     </style>
 </head>
-<body>
+<body class="zerno-panel employee-panel">
     <div class="container">
         <div class="header">
             <div class="header-title-block">
@@ -242,7 +271,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="showTab('orders')">Заказы</button>
-            <button class="tab" onclick="showTab('bookings')">Брони столов</button>
+            <button class="tab" onclick="showTab('bookings')">Брони столов<span class="pending-badge" id="pendingBadge" style="display:none;"></span></button>
         </div>
 
         <div id="ordersPanel">
@@ -252,17 +281,44 @@
         </div>
         
         <div id="bookingsPanel" style="display:none;">
-            <div class="bookings-grid" id="bookingsList">
-                <div class="empty-message">Загрузка...</div>
+            <div class="bookings-layout">
+                <div class="bookings-floor-panel">
+                    <p class="floor-now-hint" id="floorNowHint">Схема зала · сейчас</p>
+                    <div class="fp-floor-wrap">
+                        <div id="employeeFloorPlan" class="fp-floor">
+                            <span class="fp-floor-label">Зал</span>
+                        </div>
+                        <div class="fp-legend-hint">
+                            <span><i class="fp-legend-dot free"></i> Свободен</span>
+                            <span><i class="fp-legend-dot booked"></i> Забронирован (наведите — время до освобождения)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bookings-side">
+                    <div class="bookings-subtabs">
+                        <button type="button" class="bookings-subtab active" data-booking-section="requests" onclick="showBookingSection('requests')">Заявки</button>
+                        <button type="button" class="bookings-subtab" data-booking-section="arrivals" onclick="showBookingSection('arrivals')">Прибытие гостей</button>
+                        <button type="button" class="bookings-subtab" data-booking-section="history" onclick="showBookingSection('history')">История брони</button>
+                    </div>
+                    <p class="bookings-section-hint" id="bookingsSectionHint"></p>
+                    <div class="bookings-grid" id="bookingsList">
+                        <div class="empty-message">Загрузка...</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
-        const API = 'http://localhost:3000/api'; // Сохраняем обе вариации из оригинала
+        const API = '/api';
         let token = '';
         let userRole = '';
+        let allBookings = [];
+        let selectedBookingId = null;
+        let bookingsPollTimer = null;
+        let bookingSection = 'requests';
+        let floorMarkers = [];
+        let floorTablesData = [];
 
         function showTab(tab) {
             document.getElementById('ordersPanel').style.display = tab === 'orders' ? 'block' : 'none';
@@ -270,13 +326,39 @@
             document.querySelectorAll('.tab').forEach((t, i) => {
                 t.classList.toggle('active', (tab === 'orders' && i === 0) || (tab === 'bookings' && i === 1));
             });
+            if (bookingsPollTimer) {
+                clearInterval(bookingsPollTimer);
+                bookingsPollTimer = null;
+            }
             if (tab === 'orders') loadOrders();
-            else loadBookings();
+            else {
+                loadBookings();
+                loadBookingFloor();
+                bookingsPollTimer = setInterval(() => {
+                    loadBookings();
+                    loadBookingFloor();
+                }, 30000);
+            }
+        }
+
+        function formatDurationLabel(mins) {
+            const m = parseInt(mins, 10) || 120;
+            if (m % 60 === 0 && m >= 60) return `${m / 60} ч`;
+            return `${m} мин`;
+        }
+
+        function formatMinutesLeft(mins) {
+            const m = Math.max(0, parseInt(mins, 10) || 0);
+            const h = Math.floor(m / 60);
+            const r = m % 60;
+            if (h > 0 && r > 0) return `${h} ч ${r} мин`;
+            if (h > 0) return `${h} ч`;
+            return `${r} мин`;
         }
 
         async function loadOrders() {
             try {
-                const res = await fetch(API_URL + '/employee/orders', {
+                const res = await fetch(API + '/employee/orders', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 if (!res.ok) {
@@ -323,7 +405,7 @@
 
         async function updateStatus(orderId, status) {
             try {
-                const res = await fetch(API_URL + `/employee/orders/${orderId}/status`, {
+                const res = await fetch(API + `/employee/orders/${orderId}/status`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -342,73 +424,263 @@
             }
         }
 
+        function renderEmployeeFloor() {
+            const floor = document.getElementById('employeeFloorPlan');
+            ZernoFloorPlan.renderMarkers(floor, floorMarkers, { mode: 'employee' });
+            ZernoFloorPlan.renderFloor(floor, floorTablesData, {
+                mode: 'employee',
+                selectedId: selectedBookingId,
+                onTableClick: (table) => {
+                    if (!table.booking) return;
+                    selectedBookingId = table.booking.id;
+                    highlightBookingCard(table.booking.id);
+                    renderEmployeeFloor();
+                }
+            });
+        }
+
+        async function loadBookingFloor() {
+            try {
+                const res = await fetch(API + '/employee/bookings/floor', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                floorMarkers = data.markers || [];
+                floorTablesData = (data.tables || []).map(t => ZernoFloorPlan.normalizeTable(t));
+                const active = data.active_bookings?.length || 0;
+                const hint = document.getElementById('floorNowHint');
+                if (hint) {
+                    const t = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                    hint.textContent = `Схема зала · сейчас ${t} · занято столов: ${active}`;
+                }
+                renderEmployeeFloor();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function highlightBookingCard(id) {
+            document.querySelectorAll('#bookingsList .card').forEach(card => {
+                card.classList.toggle('card-highlight', card.dataset.bookingId === String(id));
+            });
+            const el = document.querySelector(`#bookingsList .card[data-booking-id="${id}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        const BOOKING_SECTION_HINTS = {
+            requests: 'Новые заявки: подтвердите или отклоните. После подтверждения клиенту придёт письмо об одобренной брони.',
+            arrivals: 'Подтверждённые брони: отметьте «Гость пришёл». Если гость опоздал более чем на 30 мин — бронь снимается автоматически, стол свободен.',
+            history: 'Завершённые визиты и отменённые брони.'
+        };
+
+        function showBookingSection(section) {
+            bookingSection = section;
+            document.querySelectorAll('.bookings-subtab').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.bookingSection === section);
+            });
+            renderBookingsList();
+        }
+
+        function renderBookingCard(b) {
+            const statusLabel = {
+                'ожидает': 'Ожидает подтверждения',
+                'подтверждено': 'Подтверждено — ждём гостя',
+                'завершено': 'Визит состоялся',
+                'отменено': 'Отменено'
+            }[b.status] || b.status;
+
+            let actions = '';
+            if (b.status === 'ожидает') {
+                actions = `
+                    <div class="status-buttons status-buttons--pair">
+                        <button type="button" class="status-btn status-btn--confirm" onclick="confirmBooking(${b.id})">Подтвердить</button>
+                        <button type="button" class="status-btn status-btn--cancel" onclick="openCancelBookingModal(${b.id})">Отклонить</button>
+                    </div>`;
+            } else if (b.status === 'подтверждено') {
+                actions = `
+                    <div class="status-buttons status-buttons--pair">
+                        <button type="button" class="status-btn status-btn--arrival" onclick="openGuestArrivalModal(${b.id})">Гость пришёл</button>
+                        <button type="button" class="status-btn status-btn--cancel" onclick="openCancelBookingModal(${b.id})">Отменить бронь</button>
+                    </div>`;
+            }
+
+            return `
+                <div class="card${selectedBookingId === b.id ? ' card-highlight' : ''}" data-booking-id="${b.id}">
+                    <div class="card-body">
+                        <div class="card-header-line">
+                            <strong class="card-title">Стол ${b.table_number}</strong>
+                            <span class="card-phone">${b.guests} гостей</span>
+                        </div>
+                        <div><span class="label-text">Дата:</span> ${b.booking_date} в ${String(b.booking_time).slice(0, 5)}</div>
+                        <div><span class="label-text">Длительность:</span> ${formatDurationLabel(b.duration_minutes)}</div>
+                        <div><span class="label-text">Клиент:</span> ${b.user_name || b.user_phone || '—'}</div>
+                        <div><span class="label-text">Телефон:</span> ${b.user_phone || '—'}</div>
+                        <div><span class="label-text">Статус:</span> <strong>${statusLabel}</strong></div>
+                        ${b.grace_minutes_left > 0 ? `<div><span class="label-text">Опоздание:</span> осталось ${formatMinutesLeft(b.grace_minutes_left)} до снятия брони</div>` : ''}
+                        ${b.is_active ? `<div><span class="label-text">Сейчас за столом:</span> осталось ${formatMinutesLeft(b.minutes_left)}</div>` : ''}
+                    </div>
+                    ${actions || ''}
+                </div>`;
+        }
+
+        function renderBookingsList() {
+            const container = document.getElementById('bookingsList');
+            const hintEl = document.getElementById('bookingsSectionHint');
+            if (hintEl) hintEl.textContent = BOOKING_SECTION_HINTS[bookingSection] || '';
+
+            let list = [];
+            if (bookingSection === 'requests') {
+                list = allBookings.filter((b) => b.status === 'ожидает');
+            } else if (bookingSection === 'arrivals') {
+                list = allBookings.filter((b) => b.status === 'подтверждено');
+            } else {
+                list = allBookings.filter((b) => b.status === 'завершено' || b.status === 'отменено');
+            }
+
+            list.sort((a, b) => (a.booking_date + a.booking_time).localeCompare(b.booking_date + b.booking_time));
+
+            if (!list.length) {
+                const empty = {
+                    requests: 'Нет новых заявок',
+                    arrivals: 'Нет ожидаемых гостей',
+                    history: 'История пуста'
+                };
+                container.innerHTML = `<div class="empty-message">${empty[bookingSection]}</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(renderBookingCard).join('');
+        }
+
         async function loadBookings() {
             try {
                 const res = await fetch(API + '/employee/bookings', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
-                const bookings = await res.json();
-                const container = document.getElementById('bookingsList');
-                
-                if (!bookings || bookings.length === 0) {
-                    container.innerHTML = '<div class="empty-message">Нет бронирований</div>';
-                    return;
+                allBookings = await res.json();
+
+                const pending = allBookings.filter((b) => b.status === 'ожидает');
+                const badge = document.getElementById('pendingBadge');
+                if (pending.length) {
+                    badge.style.display = 'inline';
+                    badge.textContent = pending.length;
+                } else {
+                    badge.style.display = 'none';
                 }
-                
-                container.innerHTML = bookings.map(b => `
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="card-header-line">
-                                <strong class="card-title">Стол ${b.table_number}</strong>
-                                <span class="card-phone">${b.guests} гостей</span>
-                            </div>
-                            <div><span class="label-text">Дата:</span> ${b.booking_date} в ${b.booking_time}</div>
-                            <div><span class="label-text">Клиент:</span> ${b.user_name || b.user_phone}</div>
-                            <div><span class="label-text">Статус:</span> <strong>${b.status}</strong></div>
-                        </div>
-                        <div class="status-buttons">
-                            ${b.status === 'ожидает' ? `
-                                <button class="status-btn" style="background:#e8f5e9;color:#2e7d32;" onclick="confirmBooking(${b.id})">Подтвердить</button>
-                                <button class="status-btn" style="background:#fbebebd8;color:#dc3545;" onclick="cancelBookingByEmployee(${b.id})">Отклонить</button>
-                            ` : ''}
-                            ${b.status === 'подтверждено' ? `
-                                <button class="status-btn" style="background:#e1f5fe;color:#0288d1;width:100%;" onclick="completeBooking(${b.id})">Отметить посещение</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `).join('');
+
+                renderBookingsList();
             } catch (err) {
                 console.error(err);
             }
         }
 
         async function confirmBooking(id) {
-            await fetch(API + `/employee/bookings/${id}/confirm`, {
+            const res = await fetch(API + `/employee/bookings/${id}/confirm`, {
                 method: 'PUT',
                 headers: { 'Authorization': 'Bearer ' + token }
             });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Не удалось подтвердить');
+                return;
+            }
+            selectedBookingId = null;
+            bookingSection = 'arrivals';
+            showBookingSection('arrivals');
             loadBookings();
+            loadBookingFloor();
         }
 
-        async function cancelBookingByEmployee(id) {
-            await fetch(API + `/employee/bookings/${id}/cancel`, {
+        function openCancelBookingModal(id) {
+            const b = allBookings.find((x) => x.id === id);
+            if (!b) return;
+            const isRequest = b.status === 'ожидает';
+            const name = b.user_name || b.user_phone || 'клиент';
+            const msg =
+                `<strong>Стол №${b.table_number}</strong> · ${b.guests} гостей<br>` +
+                `${name}<br>` +
+                `${b.booking_date} в ${b.booking_time}<br><br>` +
+                (isRequest
+                    ? 'Отклонить заявку на бронь? Письмо клиенту не отправляется.'
+                    : 'Отменить подтверждённую бронь? Письмо клиенту не отправляется.');
+
+            showAppConfirm(msg, {
+                title: isRequest ? 'Отклонить заявку' : 'Отменить бронь',
+                confirmLabel: isRequest ? 'Отклонить' : 'Отменить бронь',
+                cancelLabel: 'Назад',
+                danger: true,
+                html: true
+            }).then((ok) => {
+                if (ok) executeCancelBooking(id);
+            });
+        }
+
+        async function executeCancelBooking(id) {
+            const res = await fetch(API + `/employee/bookings/${id}/cancel`, {
                 method: 'PUT',
                 headers: { 'Authorization': 'Bearer ' + token }
             });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                if (typeof showAppAlert === 'function') showAppAlert(data.error || 'Не удалось отменить', 'Ошибка');
+                return;
+            }
+            selectedBookingId = null;
+            if (bookingSection === 'arrivals') bookingSection = 'history';
+            showBookingSection(bookingSection === 'requests' ? 'requests' : 'history');
             loadBookings();
+            loadBookingFloor();
         }
 
-        async function completeBooking(id) {
-            await fetch(API + `/employee/bookings/${id}/complete`, {
+        function openGuestArrivalModal(id) {
+            const b = allBookings.find((x) => x.id === id);
+            if (!b) return;
+            const name = b.user_name || b.user_phone || 'клиент';
+            const msg =
+                `<strong>Стол №${b.table_number}</strong> · ${b.guests} гостей<br>` +
+                `${name}<br>` +
+                `${b.booking_date} в ${b.booking_time}<br><br>` +
+                `Подтвердить прибытие гостя? Бронь перейдёт в историю у клиента.`;
+
+            showAppConfirm(msg, {
+                title: 'Гость пришёл',
+                confirmLabel: 'Да, гость пришёл',
+                cancelLabel: 'Отмена',
+                html: true
+            }).then((ok) => {
+                if (ok) completeGuestArrival(id);
+            });
+        }
+
+        async function completeGuestArrival(id) {
+            const res = await fetch(API + `/employee/bookings/${id}/complete`, {
                 method: 'PUT',
                 headers: { 'Authorization': 'Bearer ' + token }
             });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                if (typeof showAppAlert === 'function') showAppAlert(data.error || 'Не удалось отметить визит', 'Ошибка');
+                else alert(data.error || 'Не удалось отметить визит');
+                return;
+            }
+            selectedBookingId = null;
+            bookingSection = 'history';
+            showBookingSection('history');
             loadBookings();
+            loadBookingFloor();
         }
 
-        function logout() {
+        async function logout() {
+            const ok = await showAppConfirm('Выйти из панели сотрудника?', {
+                title: 'Выход',
+                confirmLabel: 'Выйти',
+                cancelLabel: 'Отмена'
+            });
+            if (!ok) return;
             localStorage.removeItem('token');
             localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
             window.location.href = 'login.html';
         }
 

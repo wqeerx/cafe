@@ -13,7 +13,7 @@
   function ensureDialog() {
     if (document.getElementById('appDialogModal')) return;
     document.body.insertAdjacentHTML('beforeend',
-      '<div id="appDialogModal" class="app-dialog modal" role="dialog" aria-modal="true" aria-hidden="true">' +
+      '<div id="appDialogModal" class="app-dialog modal" role="dialog" aria-modal="true" aria-hidden="true" style="display:none">' +
         '<div class="app-dialog-content modal-content">' +
           '<h3 class="modal-title" id="appDialogTitle"></h3>' +
           '<p class="app-dialog-message" id="appDialogMessage"></p>' +
@@ -89,6 +89,7 @@
     return showAppDialog({
       title: opts.title || 'Подтверждение',
       message,
+      html: !!opts.html,
       buttons: [
         { label: opts.cancelLabel || 'Отмена', value: false },
         { label: opts.confirmLabel || 'Подтвердить', value: true, primary: true, danger: !!opts.danger }
@@ -109,9 +110,17 @@
     });
   }
 
+  /** @deprecated используйте showAppConfirm */
+  function zernoConfirm(message, onConfirm, options) {
+    return showAppConfirm(message, options || {}).then((ok) => {
+      if (ok && typeof onConfirm === 'function') onConfirm();
+    });
+  }
+
   window.appNotify = appNotify;
   window.showAppDialog = showAppDialog;
   window.showAppAlert = showAppAlert;
   window.showAppConfirm = showAppConfirm;
   window.showNoAccountChoice = showNoAccountChoice;
+  window.zernoConfirm = zernoConfirm;
 })();

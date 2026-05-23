@@ -1,0 +1,52 @@
+/* Caslon Becker — только клиентский сайт (логотип, hero, секции, модалки) */
+
+@font-face {
+    font-family: 'Caslon Becker';
+    src: url('fonts/Caslon%20Becker.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-brand: 'Caslon Becker', Georgia, 'Times New Roman', serif;
+    --section-title-size: clamp(2.35rem, 5.8vw, 3.35rem);
+}
+
+body.zerno-client .logo,
+body.zerno-client .hero h1,
+body.zerno-client .section-title,
+body.zerno-client .modal-title {
+    font-family: var(--font-brand);
+    font-weight: 400;
+    font-style: normal;
+    font-synthesis: none;
+}
+
+body.zerno-client .logo {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    line-height: 1.2;
+    max-width: min(100%, 12rem);
+}
+
+body.zerno-client .hero h1 {
+    font-size: clamp(2.25rem, 9vw, 4.25rem);
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+}
+
+body.zerno-client .section-title {
+    font-size: var(--section-title-size);
+    line-height: 1.2;
+}
+
+body.zerno-client .modal-title {
+    font-size: clamp(1.6rem, 3.8vw, 2rem);
+    line-height: 1.25;
+}
+
+@media (max-width: 768px) {
+    body.zerno-client .logo {
+        white-space: normal;
+    }
+}

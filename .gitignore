@@ -3,3 +3,5 @@ node_modules/
 .env.local
 .evn
 *.log
+frontend/uploads/menu/*
+!frontend/uploads/menu/.gitkeep

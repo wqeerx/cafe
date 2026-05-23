@@ -4,259 +4,436 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Чёрный список</title>
+    <link rel="stylesheet" href="../shared/zerno-theme.css">
+    <script src="../shared/zerno-dialog.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f0e8;
-            color: #2c1810;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        /* Соответствие общему стилю index.html */
-        .header {
-            background: #2c1810;
-            color: #e8d5b5;
-            padding: 15px 25px;
-            border-radius: 15px;
+        .menu-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
             margin-bottom: 20px;
+            padding: 16px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+        .menu-toolbar-left {
+            flex: 1 1 240px;
+            min-width: 200px;
+        }
+        .menu-toolbar-right {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
             align-items: center;
+            gap: 12px;
+            margin-left: auto;
+            justify-content: flex-end;
         }
-        
-        .back-btn {
-            background: #e8d5b5;
-            color: #2c1810;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background 0.2s, color 0.2s;
-        }
-        
-        .back-btn:hover {
-            background: #2c1810;
-            color: #e8d5b5;
-            border: 1px solid #e8d5b5;
-        }
-        
-        /* Поисковая панель */
-        .search-box {
-            margin-bottom: 25px;
-            padding: 14px 25px;
+        .menu-search-input {
             width: 100%;
-            border: 2px solid #e0d0c0;
-            border-radius: 30px;
-            font-size: 15px;
+            max-width: 380px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
             font-family: inherit;
-            color: #2c1810;
+            font-size: 14px;
+            color: var(--text-dark);
+            background: #faf9f6;
+            box-sizing: border-box;
+        }
+        .menu-search-input:focus {
             outline: none;
-            background: white;
-            transition: border-color 0.2s;
+            border-color: var(--primary-light);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(82, 52, 38, 0.08);
         }
-        
-        .search-box:focus {
-            border-color: #2c1810;
+        .menu-toolbar label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
         }
-        
-        /* Список карточек клиентов */
-        .clients-grid {
-            display: grid;
-            gap: 15px;
+        .role-filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .client-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
+        .role-filters .tab {
+            margin: 0;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+        .role-filters .tab .tab-count {
+            display: inline-block;
+            min-width: 1.25em;
+            margin-left: 4px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(44, 24, 16, 0.08);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .role-filters .tab.active .tab-count {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .order-card-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border: 1px solid #e0d0c0;
+            align-items: flex-start;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
         }
-        
-        .client-info h3 {
-            color: #2c1810;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .client-info p {
-            color: #7a5a4a;
+        .user-card-body p {
+            margin: 6px 0 0;
             font-size: 14px;
-            margin: 4px 0;
+            color: var(--text-muted);
         }
-        
-        .client-info span.label-text {
-            color: #7a7065;
-            font-weight: 500;
+        .user-card-body p.muted {
+            font-size: 13px;
+            color: #7a5a4a;
         }
-        
-        /* Статусы и элементы управления */
-        .actions-wrapper {
+        .user-card-actions {
             display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            flex-shrink: 0;
         }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-align: center;
-        }
-        
         .blocked-badge {
-            background: #fbebebd8;
-            color: #dc3545;
-            border: 1px solid #f5c6cb;
+            background: #fff3cd;
+            color: #856404;
         }
-        
         .active-badge {
             background: #e8f5e9;
-            color: #28a745;
-            border: 1px solid #c3e6cb;
+            color: #2e7d32;
         }
-        
-        .toggle-btn {
-            padding: 10px 22px;
+        .btn-edit, .btn-delete {
             border: none;
-            border-radius: 30px;
+            padding: 8px 14px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-family: inherit;
             font-size: 13px;
-            transition: background 0.2s, opacity 0.2s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: var(--transition);
+            font-family: inherit;
+            white-space: nowrap;
         }
-        
-        .toggle-btn:active {
-            transform: scale(0.98);
+        .btn-edit {
+            background-color: #fef4d7;
+            color: #856404;
         }
-        
-        .btn-block { 
-            background: #dc3545; 
-            color: white; 
+        .btn-edit:hover {
+            background-color: #ffc107;
+            color: var(--primary);
         }
-        .btn-block:hover { 
-            background: #bd2130; 
+        .btn-delete {
+            background-color: #fde8eb;
+            color: var(--danger);
         }
-        
-        .btn-unblock { 
-            background: #2c1810; 
-            color: #e8d5b5; 
+        .btn-delete:hover {
+            background-color: var(--danger);
+            color: white;
         }
-        .btn-unblock:hover { 
-            background: #4a3319; 
+        .menu-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        .menu-page-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+        .menu-page-btn {
+            min-width: 36px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-dark);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .menu-page-btn:hover:not(:disabled) {
+            border-color: var(--primary-light);
+            background: #faf9f6;
+        }
+        .menu-page-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .menu-page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
     </style>
 </head>
-<body>
-
-    <div class="header">
-        <h2>Блокировка учётных записей</h2>
-        <a href="index.html" class="back-btn">← На главную</a>
-    </div>
-
+<body class="zerno-panel">
     <div class="container">
-        <div style="display:flex;gap:10px;margin-bottom:20px;">
-            <button type="button" id="tabClients" onclick="switchTab('client')" style="padding:10px 22px;border-radius:30px;border:2px solid #e0d0c0;background:#2c1810;color:#e8d5b5;cursor:pointer;font-weight:600;">Клиенты</button>
-            <button type="button" id="tabEmployees" onclick="switchTab('employee')" style="padding:10px 22px;border-radius:30px;border:2px solid #e0d0c0;background:white;cursor:pointer;font-weight:600;">Сотрудники</button>
+        <div class="header">
+            <h2><span class="material-symbols-rounded">block</span> Блокировка учётных записей</h2>
+            <a href="index.html" class="back-btn"><span class="material-symbols-rounded" style="font-size:18px;">arrow_back</span> На главную</a>
         </div>
-        <input type="text" id="search" class="search-box" placeholder="Поиск по телефону, email или имени..." onkeyup="filterList()">
-        <div id="clientsList" class="clients-grid">
-            <div style="text-align:center; padding:40px; color: #7a7065;">Загрузка...</div>
+
+        <div class="form-panel">
+            <div class="menu-toolbar">
+                <div class="menu-toolbar-left">
+                    <input type="search" id="search" class="menu-search-input"
+                        placeholder="Поиск: телефон, email, имя…"
+                        oninput="onFilterChange()" autocomplete="off">
+                </div>
+                <div class="menu-toolbar-right">
+                    <label for="roleTabs">Тип:</label>
+                    <div class="role-filters" id="roleTabs"></div>
+                </div>
+            </div>
+
+            <div id="usersList">Загрузка…</div>
+            <div id="usersPagination" class="menu-pagination"></div>
         </div>
     </div>
 
     <script>
-        const API = 'http://localhost:3000/api';
-        let token = localStorage.getItem('token');
-        let allUsers = [];
-        let currentTab = 'client';
+        const API = '/api';
+        const token = localStorage.getItem('token');
+        const USERS_PAGE_SIZE = 10;
+        const ROLE_TABS = [
+            { id: 'all', label: 'Все' },
+            { id: 'client', label: 'Клиенты' },
+            { id: 'employee', label: 'Сотрудники' }
+        ];
 
-        function switchTab(type) {
-            currentTab = type;
-            document.getElementById('tabClients').style.background = type === 'client' ? '#2c1810' : 'white';
-            document.getElementById('tabClients').style.color = type === 'client' ? '#e8d5b5' : '#2c1810';
-            document.getElementById('tabEmployees').style.background = type === 'employee' ? '#2c1810' : 'white';
-            document.getElementById('tabEmployees').style.color = type === 'employee' ? '#e8d5b5' : '#2c1810';
-            loadUsers();
+        let allUsers = [];
+        let currentRole = 'all';
+        let usersPage = 1;
+
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function userRole(u) {
+            return String(u.role || '').trim().toLowerCase();
+        }
+
+        function getRoleCounts() {
+            const clients = allUsers.filter(u => userRole(u) === 'client').length;
+            const employees = allUsers.filter(u => userRole(u) === 'employee').length;
+            return { all: allUsers.length, client: clients, employee: employees };
+        }
+
+        function renderRoleTabs() {
+            const counts = getRoleCounts();
+            const el = document.getElementById('roleTabs');
+            el.innerHTML = ROLE_TABS.map(tab => {
+                const active = tab.id === currentRole ? ' active' : '';
+                const count = counts[tab.id] ?? 0;
+                return `<button type="button" class="tab${active}" data-role="${tab.id}">${esc(tab.label)} <span class="tab-count">${count}</span></button>`;
+            }).join('');
+            el.querySelectorAll('.tab').forEach(btn => {
+                btn.onclick = () => {
+                    currentRole = btn.dataset.role;
+                    usersPage = 1;
+                    renderRoleTabs();
+                    renderUsers();
+                };
+            });
+        }
+
+        function getFilteredUsers() {
+            const search = document.getElementById('search').value.toLowerCase().trim();
+            let list = [...allUsers];
+
+            if (currentRole === 'client') {
+                list = list.filter(u => userRole(u) === 'client');
+            } else if (currentRole === 'employee') {
+                list = list.filter(u => userRole(u) === 'employee');
+            }
+
+            if (search) {
+                list = list.filter(u =>
+                    (u.phone && String(u.phone).toLowerCase().includes(search)) ||
+                    (u.email && String(u.email).toLowerCase().includes(search)) ||
+                    (u.fullname && String(u.fullname).toLowerCase().includes(search))
+                );
+            }
+
+            return list;
+        }
+
+        function renderUsersPagination(totalItems, page, totalPages) {
+            const el = document.getElementById('usersPagination');
+            if (!el) return;
+            if (!totalItems) {
+                el.innerHTML = '';
+                return;
+            }
+            const from = (page - 1) * USERS_PAGE_SIZE + 1;
+            const to = Math.min(page * USERS_PAGE_SIZE, totalItems);
+            let html = `<span class="menu-page-info">${from}–${to} из ${totalItems}</span>`;
+            if (totalPages > 1) {
+                html += `<button type="button" class="menu-page-btn" onclick="goUsersPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>‹</button>`;
+                for (let p = 1; p <= totalPages; p++) {
+                    if (totalPages > 7 && Math.abs(p - page) > 2 && p !== 1 && p !== totalPages) {
+                        if (p === 2 || p === totalPages - 1) html += '<span class="menu-page-info">…</span>';
+                        continue;
+                    }
+                    html += `<button type="button" class="menu-page-btn${p === page ? ' active' : ''}" onclick="goUsersPage(${p})">${p}</button>`;
+                }
+                html += `<button type="button" class="menu-page-btn" onclick="goUsersPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>›</button>`;
+            }
+            el.innerHTML = html;
+        }
+
+        function goUsersPage(page) {
+            usersPage = page;
+            renderUsers();
+            document.getElementById('usersList')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function onFilterChange() {
+            usersPage = 1;
+            renderUsers();
+        }
+
+        function renderUsers() {
+            const list = getFilteredUsers();
+            const totalPages = Math.max(1, Math.ceil(list.length / USERS_PAGE_SIZE) || 1);
+            if (usersPage > totalPages) usersPage = totalPages;
+            if (usersPage < 1) usersPage = 1;
+
+            renderRoleTabs();
+
+            const container = document.getElementById('usersList');
+            if (!list.length) {
+                const search = document.getElementById('search').value.trim();
+                container.innerHTML = `<p style="text-align:center;padding:40px;color:#7a5a4a;">${search || currentRole !== 'all' ? 'Ничего не найдено' : 'Нет учётных записей'}</p>`;
+                renderUsersPagination(0, 1, 1);
+                return;
+            }
+
+            const start = (usersPage - 1) * USERS_PAGE_SIZE;
+            const pageItems = list.slice(start, start + USERS_PAGE_SIZE);
+
+            container.innerHTML = pageItems.map(user => {
+                const blocked = user.is_blocked === 1 || user.is_blocked === true;
+                const statusClass = blocked ? 'blocked-badge' : 'active-badge';
+                const ordersLine = userRole(user) === 'client'
+                    ? `<p class="muted">Заказов: ${user.orders_count || 0}</p>`
+                    : '';
+                return `
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div class="user-card-body">
+                            <strong>${esc(user.fullname || user.phone || '—')}</strong>
+                            <span class="status-badge ${statusClass}">${blocked ? 'Заблокирован' : 'Активен'}</span>
+                            <p>${esc(user.phone || '—')} · ${esc(user.email || '—')}</p>
+                            <p class="muted">Зарегистрирован: ${esc(user.created_at ? String(user.created_at).slice(0, 10) : '—')}</p>
+                            ${ordersLine}
+                        </div>
+                        <div class="user-card-actions">
+                            <button type="button" class="${blocked ? 'btn-edit' : 'btn-delete'}" onclick="toggleBlock(${user.id})">
+                                <span class="material-symbols-rounded" style="font-size:16px;">${blocked ? 'lock_open' : 'block'}</span>
+                                ${blocked ? 'Разблокировать' : 'Заблокировать'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            renderUsersPagination(list.length, usersPage, totalPages);
         }
 
         async function loadUsers() {
-            const res = await fetch(API + '/admin/users-list?type=' + currentTab, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            allUsers = await res.json();
-            filterList();
-        }
+            const container = document.getElementById('usersList');
+            const headers = { Authorization: 'Bearer ' + token };
+            try {
+                const [clientsRes, employeesRes] = await Promise.all([
+                    fetch(API + '/admin/users-list?type=client', { headers }),
+                    fetch(API + '/admin/users-list?type=employee', { headers })
+                ]);
 
-        function displayClients(clients) {
-            const container = document.getElementById('clientsList');
-            if (clients.length === 0) {
-                container.innerHTML = '<p style="text-align:center;padding:40px;color:#7a7065;">Нет клиентов</p>';
-                return;
+                if (clientsRes.status === 401 || clientsRes.status === 403 ||
+                    employeesRes.status === 401 || employeesRes.status === 403) {
+                    window.location.href = '/employee/login.html';
+                    return;
+                }
+                if (!clientsRes.ok || !employeesRes.ok) {
+                    throw new Error('load failed');
+                }
+
+                const clients = await clientsRes.json();
+                const employees = await employeesRes.json();
+                allUsers = [
+                    ...(Array.isArray(clients) ? clients : []),
+                    ...(Array.isArray(employees) ? employees : [])
+                ];
+                usersPage = 1;
+                renderUsers();
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--danger);">Не удалось загрузить список</p>';
+                document.getElementById('usersPagination').innerHTML = '';
             }
-            container.innerHTML = clients.map(client => `
-                <div class="client-card">
-                    <div class="client-info">
-                        <h3>${client.fullname || client.phone}</h3>
-                        <p><span class="label-text">Тел:</span> ${client.phone} | <span class="label-text">Email:</span> ${client.email || '—'}</p>
-                        <p><span class="label-text">Зарегистрирован:</span> ${client.created_at || '—'}</p>
-                        <p><span class="label-text">Заказов:</span> ${client.orders_count || 0}</p>
-                    </div>
-                    <div class="actions-wrapper">
-                        <span class="status-badge ${client.is_blocked ? 'blocked-badge' : 'active-badge'}">
-                            ${client.is_blocked ? 'Заблокирован' : 'Активен'}
-                        </span>
-                        <button class="toggle-btn ${client.is_blocked ? 'btn-unblock' : 'btn-block'}" 
-                                onclick="toggleBlock(${client.id}, ${client.is_blocked})">
-                            ${client.is_blocked ? 'Разблокировать' : 'Заблокировать'}
-                        </button>
-                    </div>
-                </div>
-            `).join('');
         }
 
-        function filterList() {
-            const search = document.getElementById('search').value.toLowerCase();
-            const filtered = allUsers.filter(c => 
-                (c.phone && c.phone.toLowerCase().includes(search)) ||
-                (c.email && c.email.toLowerCase().includes(search)) ||
-                (c.fullname && c.fullname.toLowerCase().includes(search))
+        async function toggleBlock(userId) {
+            const user = allUsers.find(u => String(u.id) === String(userId));
+            if (!user) return;
+            const blocked = user.is_blocked === 1 || user.is_blocked === true;
+            const name = esc(user.fullname || user.phone || 'пользователя');
+            const ok = await showAppConfirm(
+                `${blocked ? 'Разблокировать' : 'Заблокировать'} учётную запись <strong>${name}</strong>?`,
+                {
+                    title: blocked ? 'Разблокировка' : 'Блокировка',
+                    confirmLabel: blocked ? 'Разблокировать' : 'Заблокировать',
+                    cancelLabel: 'Отмена',
+                    danger: !blocked,
+                    html: true
+                }
             );
-            displayClients(filtered);
-        }
+            if (!ok) return;
 
-        async function toggleBlock(userId, isBlocked) {
-            const action = isBlocked ? 'unblock' : 'block';
-            if (confirm(`${isBlocked ? 'Разблокировать' : 'Заблокировать'} этого пользователя?`)) {
-                await fetch(API + `/admin/users/${userId}/${action}`, {
+            const action = blocked ? 'unblock' : 'block';
+            try {
+                const res = await fetch(API + `/admin/users/${userId}/${action}`, {
                     method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + token }
+                    headers: { Authorization: 'Bearer ' + token }
                 });
-                loadUsers();
+                if (res.ok) {
+                    appNotify(blocked ? 'Пользователь разблокирован' : 'Пользователь заблокирован', 'success');
+                    loadUsers();
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    appNotify(data.error || 'Ошибка', 'error');
+                }
+            } catch (error) {
+                appNotify('Ошибка соединения', 'error');
             }
         }
 
-        window.onload = () => {
-            if (!token) window.location.href = '/employee/login.html';
+        if (!token) {
+            window.location.href = '/employee/login.html';
+        } else {
             loadUsers();
-        };
+        }
     </script>
 </body>
 </html>

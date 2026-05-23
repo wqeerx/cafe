@@ -20,7 +20,7 @@ function clientToken(user, jwt, SECRET) {
   return jwt.sign(
     { id: user.id, phone: user.phone, email: user.email, role: user.role },
     SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '7d' }
   );
 }
 

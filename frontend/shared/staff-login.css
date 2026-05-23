@@ -1,0 +1,137 @@
+/* Страница входа персонала — как модалка входа на клиентском сайте */
+
+.staff-login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-color: #fcfaf7;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', Helvetica, Arial, sans-serif;
+}
+
+.staff-login-card .card-welcome-title {
+    color: #2d2418;
+    margin: 0 0 8px;
+    text-align: center;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.staff-login-card {
+    background: #fff;
+    padding: 40px;
+    border-radius: 24px;
+    max-width: 450px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    border: 1px solid #e6ded6;
+    box-sizing: border-box;
+}
+
+.staff-login-card .modal-subtitle {
+    text-align: center;
+    color: #8a6a5a;
+    margin: 0 0 30px;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.staff-login-card .form-group {
+    margin-bottom: 20px;
+}
+
+.staff-login-card .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2d2418;
+    font-size: 14px;
+}
+
+.staff-login-card .form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e8dcc8;
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: all 0.25s ease;
+    color: #2d2418;
+    background: #fef8f0;
+    box-sizing: border-box;
+}
+
+.staff-login-card .form-group input:focus {
+    outline: none;
+    border-color: #2d2418;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(45, 36, 24, 0.1);
+}
+
+.staff-login-card .password-wrapper {
+    position: relative;
+}
+
+.staff-login-card .password-wrapper input {
+    padding-right: 90px;
+}
+
+.staff-login-card .toggle-password {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: 1px solid #e8dcc8;
+    color: #8a6a5a;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+.staff-login-card .toggle-password:hover {
+    border-color: #2d2418;
+    color: #2d2418;
+    background: #f5e6d3;
+}
+
+.staff-login-card .btn-primary.btn-full {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 4px;
+    background: #2d2418;
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+.staff-login-card .btn-primary.btn-full:hover:not(:disabled) {
+    background: #4a3a2a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 36, 24, 0.3);
+}
+
+.staff-login-card .btn-primary.btn-full:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.staff-login-card .error-message {
+    color: #dc3545;
+    font-size: 13px;
+    margin-top: 14px;
+    text-align: center;
+    min-height: 18px;
+    line-height: 1.4;
+}

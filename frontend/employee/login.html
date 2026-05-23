@@ -4,136 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zerno — Вход для сотрудников</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #2c1810 0%, #5a3725 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            width: 400px;
-            text-align: center;
-        }
-        h1 {
-            color: #2c1810;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            color: #7a5a4a;
-            margin-bottom: 30px;
-        }
-        input {
-            width: 100%;
-            padding: 14px;
-            margin: 10px 0;
-            border: 2px solid #e0d0c0;
-            border-radius: 30px;
-            font-size: 16px;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #2c1810;
-            color: white;
-            border: none;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #5a3725;
-        }
-        .error {
-            color: #c0392b;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .info {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #999;
-            text-align: left;
-            background: #f5f0e8;
-            padding: 10px;
-            border-radius: 15px;
-        }
-    </style>
+    <link rel="stylesheet" href="../shared/staff-login.css">
 </head>
-<body>
-    <div class="login-container">
-        <h1>☕ Zerno</h1>
-        <div class="subtitle">Вход для сотрудников и администратора</div>
-        <input type="text" id="phone" placeholder="Телефон" autocomplete="off">
-        <input type="password" id="password" placeholder="Пароль">
-        <button onclick="login()">Войти</button>
-        <div id="error" class="error"></div>
-        <div class="info">
-            <strong>Тестовые данные:</strong><br>
-            Сотрудник: +375291112233 / employee123<br>
-            Администратор: +375291234567 / admin123
+<body class="staff-login-page">
+    <div class="staff-login-card">
+        <h2 class="card-welcome-title">Вход для сотрудников</h2>
+        <p class="modal-subtitle">Войдите по email или телефону и паролю</p>
+
+        <div class="form-group">
+            <label for="login">Email или телефон</label>
+            <input type="text" id="login" placeholder="your@email.com или +375291112233" autocomplete="username">
         </div>
+
+        <div class="form-group">
+            <label for="password">Пароль</label>
+            <div class="password-wrapper">
+                <input type="password" id="password" placeholder="Введите пароль" autocomplete="current-password">
+                <button type="button" class="toggle-password" onclick="togglePassword('password', this)">Показать</button>
+            </div>
+        </div>
+
+        <button type="button" class="btn-primary btn-full" id="loginBtn" onclick="login()">Войти</button>
+        <div id="error" class="error-message"></div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
+        const API = '/api';
+
+        function togglePassword(fieldId, btn) {
+            const input = document.getElementById(fieldId);
+            if (!input || !btn) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Скрыть';
+            } else {
+                input.type = 'password';
+                btn.textContent = 'Показать';
+            }
+        }
 
         async function login() {
-            const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
+            const loginVal = document.getElementById('login').value.trim();
             const errorDiv = document.getElementById('error');
+            const btn = document.getElementById('loginBtn');
+            errorDiv.textContent = '';
 
-            if (!phone || !password) {
-                errorDiv.innerText = 'Заполните все поля';
+            if (!loginVal) {
+                errorDiv.textContent = 'Введите email или телефон';
+                return;
+            }
+            if (!password) {
+                errorDiv.textContent = 'Введите пароль';
                 return;
             }
 
+            const body = { password };
+            if (loginVal.includes('@')) {
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginVal)) {
+                    errorDiv.textContent = 'Введите корректный email';
+                    return;
+                }
+                body.email = loginVal.toLowerCase();
+            } else {
+                body.phone = loginVal;
+            }
+
+            btn.disabled = true;
             try {
-                const response = await fetch(`${API_URL}/login`, {
+                const response = await fetch(API + '/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, password })
+                    body: JSON.stringify(body)
                 });
-
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Сохраняем токен и роль
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('userRole', data.user.role);
-                    localStorage.setItem('userName', data.user.fullname || data.user.phone);
+                    localStorage.setItem('userName', data.user.fullname || data.user.email || data.user.phone);
 
-                    // Перенаправляем в зависимости от роли
                     if (data.user.role === 'admin') {
                         window.location.href = '/admin/index.html';
                     } else if (data.user.role === 'employee') {
                         window.location.href = '/employee/index.html';
                     } else {
-                        errorDiv.innerText = 'У вас нет доступа к панели сотрудника';
+                        errorDiv.textContent = 'Нет доступа к панели персонала';
+                        localStorage.removeItem('token');
                     }
                 } else {
-                    errorDiv.innerText = data.error || 'Ошибка входа';
+                    errorDiv.textContent = data.error || 'Неверный логин или пароль';
                 }
             } catch (err) {
-                errorDiv.innerText = 'Ошибка соединения с сервером';
+                errorDiv.textContent = 'Не удалось подключиться к серверу';
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        // Enter key
         document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+        document.getElementById('login').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
         });
     </script>

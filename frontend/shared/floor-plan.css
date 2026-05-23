@@ -1,0 +1,412 @@
+/* Схема зала — стол + стулья */
+
+.fp-floor-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fp-floor {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    min-height: 320px;
+    max-height: 520px;
+    background:
+        linear-gradient(135deg, #faf6f0 0%, #f3ebe0 100%);
+    border: 2px dashed var(--border, #e6ded6);
+    border-radius: 20px;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+}
+
+.fp-floor.fp-drop-target {
+    border-color: var(--primary, #2c1810);
+    box-shadow: inset 0 0 0 3px rgba(44, 24, 16, 0.12);
+}
+
+.fp-floor-label {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted, #6e5d55);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.fp-table-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    z-index: 3;
+    touch-action: none;
+}
+
+.fp-table-node.fp-dragging {
+    cursor: grabbing;
+    z-index: 10;
+    opacity: 0.92;
+}
+
+.fp-mode-select {
+    cursor: pointer;
+}
+
+.fp-mode-select.fp-booked,
+.fp-mode-select.fp-too-small {
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+.fp-mode-select.fp-booked.fp-booked-jump {
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.fp-mode-select.fp-booked.fp-booked-jump:hover .fp-table-surface {
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35);
+}
+
+.fp-chairs {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.fp-chair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 15px;
+    background: #c4a882;
+    border: 1.5px solid #8b6914;
+    border-radius: 4px 4px 2px 2px;
+    box-shadow: 0 1px 2px rgba(44, 24, 16, 0.15);
+    transform-origin: center center;
+}
+
+.fp-table-surface {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(145deg, #d4b896 0%, #b8956a 100%);
+    border: 2px solid #8b6914;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(44, 24, 16, 0.18);
+    z-index: 1;
+}
+
+.fp-table-num {
+    font-size: 17px;
+    font-weight: 400;
+    color: #2c1810;
+    line-height: 1;
+}
+
+/* Маркеры зала: вход, стена, касса */
+.fp-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    cursor: grab;
+    touch-action: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(44, 24, 16, 0.12);
+    user-select: none;
+}
+
+.fp-marker.fp-dragging {
+    cursor: grabbing;
+    z-index: 9;
+    opacity: 0.9;
+}
+
+.fp-marker-label {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    text-align: center;
+    padding: 0 4px;
+}
+
+.fp-marker-entrance {
+    background: linear-gradient(145deg, #e8f4e8 0%, #c5e0c5 100%);
+    border: 2px solid #5a9a5a;
+    color: #2d5a2d;
+}
+
+.fp-marker-wall {
+    background: linear-gradient(90deg, #8b7355 0%, #6e5d55 100%);
+    border: 2px solid #4a3f38;
+    color: #f5e6d3;
+    border-radius: 4px;
+}
+
+.fp-marker-wall .fp-marker-label {
+    font-size: 10px;
+}
+
+.fp-marker-cashier {
+    background: linear-gradient(145deg, #fef4d7 0%, #e8d5b5 100%);
+    border: 2px solid #8b6914;
+    color: #2c1810;
+}
+
+.fp-marker-btn {
+    position: absolute;
+    top: -8px;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.fp-marker-rotate {
+    right: -8px;
+    background: #fef8f0;
+    color: var(--primary, #2c1810);
+}
+
+.fp-marker-delete {
+    left: -8px;
+    background: #fde8eb;
+    color: #c0392b;
+}
+
+.fp-marker-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fp-marker-palette-item {
+    cursor: grab;
+}
+
+.fp-marker-palette-item .fp-marker {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+}
+
+.fp-marker-preview {
+    position: relative;
+    cursor: grab;
+}
+
+.fp-mode-select.fp-marker,
+.fp-mode-employee.fp-marker {
+    cursor: default;
+    pointer-events: none;
+}
+
+.fp-mode-employee {
+    cursor: default;
+}
+
+.fp-mode-employee.fp-booked .fp-table-surface {
+    background: linear-gradient(145deg, #f5c6cb 0%, #e08a90 100%);
+    border-color: #c0392b;
+}
+
+.fp-mode-employee.fp-booked .fp-chair {
+    background: #e8a0a6;
+    border-color: #c0392b;
+}
+
+.fp-mode-employee.fp-emp-pick .fp-table-surface {
+    box-shadow: 0 0 0 3px rgba(44, 24, 16, 0.35);
+}
+
+.fp-legend-hint {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    font-size: 12px;
+    color: var(--text-muted, #6e5d55);
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid var(--border, #e6ded6);
+    border-radius: 12px;
+}
+
+.fp-legend-hint span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fp-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.fp-legend-dot.free { background: #a8d4a8; }
+.fp-legend-dot.booked { background: #e08a90; }
+
+/* Клиент: состояния */
+.fp-mode-select.fp-free .fp-table-surface {
+    background: linear-gradient(145deg, #d8ead8 0%, #a8d4a8 100%);
+    border-color: #5a9a5a;
+}
+
+.fp-mode-select.fp-free .fp-chair {
+    background: #9dcc9d;
+    border-color: #5a9a5a;
+}
+
+.fp-mode-select.fp-selected .fp-table-surface {
+    background: linear-gradient(145deg, #fef4d7 0%, #e8d5b5 100%);
+    border-color: #2c1810;
+    box-shadow: 0 0 0 3px rgba(44, 24, 16, 0.25);
+}
+
+.fp-mode-select.fp-booked .fp-table-surface {
+    background: linear-gradient(145deg, #f5c6cb 0%, #e08a90 100%);
+    border-color: #c0392b;
+}
+
+.fp-mode-select.fp-booked .fp-chair {
+    background: #e8a0a6;
+    border-color: #c0392b;
+}
+
+/* Занят прямо сейчас (схема «сейчас»), на выбранное время может быть свободен */
+.fp-mode-select.fp-live-now .fp-table-surface {
+    background: linear-gradient(145deg, #f5c6cb 0%, #e08a90 100%);
+    border-color: #c0392b;
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35);
+}
+
+.fp-mode-select.fp-live-now .fp-chair {
+    background: #e8a0a6;
+    border-color: #c0392b;
+}
+
+.fp-mode-select.fp-live-now.fp-selected .fp-table-surface {
+    box-shadow: 0 0 0 3px rgba(44, 24, 16, 0.35);
+}
+
+.fp-live-badge {
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    transform: translate(-50%, 100%);
+    font-size: 9px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #fff;
+    background: #c0392b;
+    padding: 2px 5px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.fp-mode-select.fp-too-small .fp-table-surface,
+.fp-mode-select.fp-too-small .fp-chair {
+    filter: grayscale(0.4);
+    opacity: 0.65;
+}
+
+.fp-drag-ghost {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    opacity: 0.88;
+}
+
+/* Палитра (столы не на схеме) */
+.fp-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fp-palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px;
+    background: #fef8f0;
+    border: 1px solid var(--border, #e6ded6);
+    border-radius: 14px;
+    cursor: grab;
+}
+
+.fp-palette-item .fp-table-node {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    transform: none;
+}
+
+.fp-palette-meta {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted, #6e5d55);
+}
+
+.fp-palette-empty {
+    font-size: 13px;
+    color: var(--text-muted, #6e5d55);
+    margin: 0;
+}
+
+/* Легенда */
+.fp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 14px 16px;
+    background: white;
+    border: 1px solid var(--border, #e6ded6);
+    border-radius: 14px;
+}
+
+.fp-legend-item {
+    font-size: 13px;
+    color: var(--text-muted, #6e5d55);
+}
+
+.fp-legend-item strong {
+    color: var(--primary, #2c1810);
+}
+
+.fp-hint {
+    font-size: 12px;
+    color: var(--text-muted, #6e5d55);
+    line-height: 1.5;
+    margin: 0;
+}

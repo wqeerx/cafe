@@ -1,9 +1,32 @@
-const API = 'http://localhost:3000/api';
+const API = '/api';
         let currentUser = null;
         let allItems = [];
         let categories = [];
         let cart = [];
         let allOrders = [];
+        let orderStatusMap = {};
+        let orderPollTimer = null;
+        let catalogBrowseCategoryId = null;
+        async function pollClientOrders() {
+            const token = getAuthToken();
+            if (!token || !currentUser) return;
+            try {
+                const res = await fetch(API + '/my-orders/detailed', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) return;
+                const orders = await res.json();
+                if (!Array.isArray(orders)) return;
+                orderStatusMap = trackOrderStatusChanges(orders, orderStatusMap);
+                allOrders = orders;
+            } catch (e) { /* ignore */ }
+        }
+
+        function startClientOrderPolling() {
+            if (orderPollTimer) return;
+            pollClientOrders();
+            orderPollTimer = setInterval(pollClientOrders, 20000);
+        }
 
         // Основные функции
         function toggleCart() { 
@@ -86,9 +109,9 @@ const API = 'http://localhost:3000/api';
             else if (btn.dataset.prevText) btn.innerText = btn.dataset.prevText;
         }
         
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-            // Очищаем ошибки при закрытии
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            if (id === 'bookingModal') document.body.style.overflow = '';
             clearErrors();
         }
         
@@ -118,25 +141,160 @@ const API = 'http://localhost:3000/api';
         }
 
         function showCatalog() {
-            document.getElementById('productsSection').classList.remove('active');
-            document.getElementById('catalog').style.display = 'block';
-            const catMax = document.getElementById('catMaxPrice');
-            const catSort = document.getElementById('catSort');
-            if (catMax) catMax.value = '';
-            if (catSort) catSort.value = '';
+            const catalog = document.getElementById('catalog');
+            if (catalog) catalog.style.display = 'block';
             scrollToCatalog();
         }
 
-        let currentCategoryProducts = [];
+        function clampPriceInput(el) {
+            if (!el || el.value === '') return;
+            const n = parseFloat(el.value);
+            if (isNaN(n) || n < 0) el.value = '0';
+        }
 
-        function applyItemFilters(items, sortVal) {
+        function parsePriceField(id) {
+            const el = document.getElementById(id);
+            if (!el || el.value === '') return null;
+            const n = parseFloat(el.value);
+            if (isNaN(n) || n < 0) return 0;
+            return n;
+        }
+
+        function filterAndSortItems(items, opts) {
             let list = [...items];
-            const cat = document.getElementById('searchCategory')?.value;
-            if (cat) list = list.filter(i => String(i.category_id) === String(cat));
-            if (sortVal === 'price_asc') list.sort((a, b) => a.price - b.price);
-            else if (sortVal === 'price_desc') list.sort((a, b) => b.price - a.price);
-            else if (sortVal === 'popularity') list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            if (opts.category) list = list.filter(i => String(i.category_id) === String(opts.category));
+            if (opts.priceMin != null) list = list.filter(i => i.price >= opts.priceMin);
+            if (opts.priceMax != null) list = list.filter(i => i.price <= opts.priceMax);
+            const sort = opts.sort || '';
+            if (sort === 'price_asc') list.sort((a, b) => a.price - b.price);
+            else if (sort === 'price_desc') list.sort((a, b) => b.price - a.price);
+            else if (sort === 'popularity_asc') list.sort((a, b) => (a.popularity || 0) - (b.popularity || 0));
+            else if (sort === 'popularity_desc') list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            else if (sort === 'popularity') list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
             return list;
+        }
+
+        function readSearchFilterOpts() {
+            return {
+                category: document.getElementById('searchCategory')?.value || '',
+                priceMin: parsePriceField('searchPriceMin'),
+                priceMax: parsePriceField('searchPriceMax'),
+                sort: document.getElementById('searchSort')?.value || ''
+            };
+        }
+
+        function readCatalogFilterOpts() {
+            const filterCategory = document.getElementById('catalogFilterCategory')?.value || '';
+            const category = catalogBrowseCategoryId || filterCategory;
+            return {
+                category,
+                priceMin: parsePriceField('catalogPriceMin'),
+                priceMax: parsePriceField('catalogPriceMax'),
+                sort: document.getElementById('catalogSort')?.value || ''
+            };
+        }
+
+        function onCatalogFilterCategoryChange() {
+            catalogBrowseCategoryId = null;
+            applyCatalogFilters();
+        }
+
+        function populateCategorySelects() {
+            const opts = '<option value="">Все категории</option>' +
+                categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            ['searchCategory', 'catalogFilterCategory'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    const cur = sel.value;
+                    sel.innerHTML = opts;
+                    if (cur) sel.value = cur;
+                }
+            });
+        }
+
+        function resetCatalogFilters() {
+            catalogBrowseCategoryId = null;
+            ['catalogFilterCategory', 'catalogSort'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            ['catalogPriceMin', 'catalogPriceMax'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            applyCatalogFilters();
+        }
+
+        function applyCatalogFilters() {
+            const opts = readCatalogFilterOpts();
+            const categoriesView = document.getElementById('catalogCategoriesView');
+            const productsView = document.getElementById('catalogProductsView');
+            const container = document.getElementById('catalogMenuGrid');
+            const titleEl = document.getElementById('catalogResultsTitle');
+            const backBtn = document.getElementById('catalogBackBtn');
+
+            if (!opts.category) {
+                catalogBrowseCategoryId = null;
+                if (categoriesView) categoriesView.hidden = false;
+                if (productsView) productsView.hidden = true;
+                if (container) container.innerHTML = '';
+                if (backBtn) backBtn.hidden = true;
+                return;
+            }
+
+            if (categoriesView) categoriesView.hidden = true;
+            if (productsView) productsView.hidden = false;
+            if (backBtn) backBtn.hidden = false;
+
+            const cat = categories.find(c => String(c.id) === String(opts.category));
+            if (titleEl) titleEl.innerText = cat ? cat.name : 'Позиции';
+
+            const base = allItems.filter(i => String(i.category_id) === String(opts.category));
+            const products = filterAndSortItems(base, { ...opts, category: '' });
+
+            if (!container) return;
+            if (!products.length) {
+                container.innerHTML = '<p class="catalog-empty">В этой категории ничего не найдено. Попробуйте изменить фильтры.</p>';
+                return;
+            }
+            container.innerHTML = products.map(item => buildProductCard(item)).join('');
+        }
+
+        function showCatalogCategories() {
+            catalogBrowseCategoryId = null;
+            const sel = document.getElementById('catalogFilterCategory');
+            if (sel) sel.value = '';
+            applyCatalogFilters();
+            document.getElementById('catalogCategoriesView')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderPopularProducts() {
+            const wrap = document.getElementById('popularScroll');
+            if (!wrap || !allItems.length) return;
+            const popular = [...allItems]
+                .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+                .slice(0, 12);
+            wrap.innerHTML = popular.map(item => {
+                const img = item.image_url
+                    ? `<img src="${item.image_url}" alt="${item.name}">`
+                    : '<span class="material-symbols-rounded">coffee</span>';
+                return `<article class="popular-card" onclick="openProduct(${item.id})">
+                    <div class="popular-card-image">${img}</div>
+                    <div class="popular-card-body">
+                        <h4>${item.name}</h4>
+                        <span class="popular-card-price">${item.price.toFixed(2)} BYN</span>
+                    </div>
+                </article>`;
+            }).join('');
+        }
+
+        function toggleSearchFilters(e) {
+            if (e) e.stopPropagation();
+            const panel = document.getElementById('searchFiltersPanel');
+            const btn = document.getElementById('searchFilterBtn');
+            if (!panel) return;
+            const open = panel.classList.toggle('show');
+            if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
 
         function buildProductCard(item) {
@@ -161,23 +319,10 @@ const API = 'http://localhost:3000/api';
             if (item) showProductDetails(item);
         }
 
-        function applyCategoryFilters() {
-            const sort = document.getElementById('catSort')?.value || '';
-            const maxPrice = document.getElementById('catMaxPrice')?.value;
-            let base = [...currentCategoryProducts];
-            if (maxPrice) base = base.filter(i => i.price <= parseFloat(maxPrice));
-            const products = applyItemFilters(base, sort);
-            const container = document.getElementById('productsGrid');
-            if (!products.length) { container.innerHTML = '<p>Нет позиций</p>'; return; }
-            container.innerHTML = products.map(item => buildProductCard(item)).join('');
-        }
-
-        function showCategoryProducts(categoryId, categoryName) {
-            currentCategoryProducts = allItems.filter(item => item.category_id == categoryId);
-            document.getElementById('catalog').style.display = 'none';
-            document.getElementById('productsSection').classList.add('active');
-            document.getElementById('categoryTitle').innerText = categoryName;
-            applyCategoryFilters();
+        function showCategoryProducts(categoryId) {
+            catalogBrowseCategoryId = String(categoryId);
+            applyCatalogFilters();
+            document.getElementById('catalogProductsView')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
                 // ====== ПОИСК ======
@@ -194,7 +339,7 @@ const API = 'http://localhost:3000/api';
                 item.name.toLowerCase().includes(query) || 
                 (item.description && item.description.toLowerCase().includes(query))
             );
-            filtered = applyItemFilters(filtered, document.getElementById('searchSort')?.value || '');
+            filtered = filterAndSortItems(filtered, readSearchFilterOpts());
             
             if (filtered.length === 0) {
                 resultsContainer.innerHTML = '<div class="search-result-item"><span>Ничего не найдено</span></div>';
@@ -223,10 +368,11 @@ const API = 'http://localhost:3000/api';
         }
         
         function selectSearchResult(categoryId, categoryName, item) {
-            showCategoryProducts(categoryId, categoryName);
-            setTimeout(() => showProductDetails(item), 300);
+            openProduct(item.id);
             document.getElementById('searchResults').classList.remove('show');
             document.getElementById('searchInput').value = '';
+            const panel = document.getElementById('searchFiltersPanel');
+            if (panel) panel.classList.remove('show');
         }
 
         // ====== ВАЛИДАЦИЯ ======
@@ -482,13 +628,82 @@ const API = 'http://localhost:3000/api';
         }
 
         function applyLoggedIn(data) {
-            localStorage.setItem('token', data.token);
-            currentUser = data.user;
+            if (!setAuthToken(data.token)) {
+                notifyError('Ошибка входа: неверный токен');
+                return;
+            }
+            saveClientSession(data.user, data.token);
+            currentUser = { ...data.user, role: data.user?.role || 'client' };
             document.getElementById('authButtons').style.display = 'none';
             document.getElementById('profileSection').style.display = 'block';
             document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
             document.getElementById('profileEmail').innerText = currentUser.email;
             updateCart();
+            startClientOrderPolling();
+            updateBookingAuthUi();
+        }
+
+        function showLoggedInUi(user) {
+            if (!user) return;
+            currentUser = user;
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('profileSection').style.display = 'block';
+            document.getElementById('profileName').innerText = user.fullname || user.email || 'Гость';
+            document.getElementById('profileEmail').innerText = user.email || '';
+            updateBookingAuthUi();
+        }
+
+        async function restoreClientAuth() {
+            const token = getAuthToken();
+            if (!token) return;
+
+            const cached = loadClientSession();
+            if (cached) {
+                showLoggedInUi(cached);
+                loadCartStorage();
+                startClientOrderPolling();
+                updateBookingAuthUi();
+            }
+
+            const payload = parseJwtPayload(token);
+            if (payload?.role === 'admin' || payload?.role === 'employee') {
+                clearClientSession();
+                currentUser = null;
+                document.getElementById('authButtons').style.display = 'flex';
+                document.getElementById('profileSection').style.display = 'none';
+                return;
+            }
+
+            const result = await fetchClientProfile(token);
+            if (result.ok && result.user) {
+                if (!isClientRole(result.user, token)) {
+                    clearClientSession();
+                    currentUser = null;
+                    document.getElementById('authButtons').style.display = 'flex';
+                    document.getElementById('profileSection').style.display = 'none';
+                    return;
+                }
+                currentUser = result.user;
+                saveClientSession(result.user, token);
+                showLoggedInUi(currentUser);
+                loadCartStorage();
+                startClientOrderPolling();
+                updateBookingAuthUi();
+                return;
+            }
+
+            if (result.authFailed) {
+                clearClientSession();
+                currentUser = null;
+                document.getElementById('authButtons').style.display = 'flex';
+                document.getElementById('profileSection').style.display = 'none';
+                return;
+            }
+
+            if (!cached) {
+                document.getElementById('authButtons').style.display = 'flex';
+                document.getElementById('profileSection').style.display = 'none';
+            }
         }
 
         async function forgotSendCode() {
@@ -546,6 +761,10 @@ const API = 'http://localhost:3000/api';
         }
 
         function showEditProfileModal() {
+            if (!currentUser) {
+                notifyError('Войдите в аккаунт');
+                return;
+            }
             document.getElementById('editFullname').value = currentUser.fullname || '';
             document.getElementById('editEmail').value = currentUser.email || '';
             document.getElementById('editPhone').value = currentUser.phone || '';
@@ -554,32 +773,46 @@ const API = 'http://localhost:3000/api';
         }
 
         async function updateProfile() {
-            let data = { 
-                fullname: document.getElementById('editFullname').value, 
-                email: document.getElementById('editEmail').value, 
+            const token = getAuthToken();
+            if (!token || !currentUser) {
+                notifyError('Войдите в аккаунт');
+                return;
+            }
+            const body = {
+                fullname: document.getElementById('editFullname').value,
+                email: document.getElementById('editEmail').value,
                 phone: getPhoneForSubmit('editPhone')
             };
-            let res = await fetch(API + '/user/profile', { 
-                method: 'PUT', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') }, 
-                body: JSON.stringify(data) 
+            const res = await fetch(API + '/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify(body)
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
-                showSuccess('Профиль обновлён');
-                currentUser = { ...currentUser, ...data };
+                currentUser = data.id ? data : { ...currentUser, ...body };
+                saveClientSession(currentUser, token);
                 document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
-                document.getElementById('profileEmail').innerText = currentUser.email;
+                document.getElementById('profileEmail').innerText = currentUser.email || '';
+                showSuccess('Профиль обновлён');
                 closeModal('editProfileModal');
-            } else notifyError('Ошибка сохранения');
+            } else {
+                notifyError(data.error || 'Ошибка сохранения');
+            }
         }
 
         function logout() {
-            localStorage.removeItem('token');
+            clearClientSession();
             currentUser = null;
             cart = [];
+            if (orderPollTimer) {
+                clearInterval(orderPollTimer);
+                orderPollTimer = null;
+            }
             updateCart();
             document.getElementById('authButtons').style.display = 'flex';
             document.getElementById('profileSection').style.display = 'none';
+            updateBookingAuthUi();
             showSuccess('Вы вышли из системы');
         }
 
@@ -587,7 +820,7 @@ const API = 'http://localhost:3000/api';
             let res = await fetch(API + '/categories');
             categories = await res.json();
             document.getElementById('categoriesGrid').innerHTML = categories.map(cat => `
-                <div class="category-card" onclick="showCategoryProducts(${cat.id}, '${cat.name.replace(/'/g, "\\'")}')">
+                <div class="category-card" onclick="showCategoryProducts(${cat.id})">
                     <div class="category-image">${cat.image_url ? `<img src="${cat.image_url}">` : `<div style="font-size:36px;">${getCategoryIcon(cat.name)}</div>`}</div>
                     <h3>${cat.name}</h3>
                     <p>${allItems.filter(i => i.category_id == cat.id).length} позиций</p>
@@ -601,41 +834,21 @@ const API = 'http://localhost:3000/api';
         }
 
         const locations = [
-            { name: 'Zerno в ТЦ "Green city"', address: 'г. Минск, ул. Притульского 156', hours: '8:00-22:00', phone: '+375 (44) 444-44-44' },
-            { name: 'Zerno в ТЦ "Замок"', address: 'г. Минск, ул. Победителей 65', hours: '8:00-22:00', phone: '+375 (44) 444-44-44' },
-            { name: 'Zerno на ул. Л.Беды', address: 'г. Минск, ул. Лебедянская 26', hours: '8:00-22:00', phone: '+375 (44) 444-44-44' }
+            { name: 'Zerno в ТЦ «Замок»', address: 'г. Минск, ул. Победителей 65', hours: '8:00–22:00', phone: '+375 (44) 444-44-44' }
         ];
         document.getElementById('locationsGrid').innerHTML = locations.map(l =>
-            '<div class="location-card"><h3><span class="material-symbols-rounded icon-sm">location_on</span> ' + l.name + '</h3>' +
-            '<div>' + l.address + '</div><div><span class="material-symbols-rounded icon-sm">schedule</span> ' + l.hours + '</div>' +
-            '<div><span class="material-symbols-rounded icon-sm">call</span> ' + l.phone + '</div></div>'
+            '<' + 'div class="location-info-block">' +
+            '<h3 class="location-name">' + l.name + '</h3>' +
+            '<p class="location-address">' + l.address + '</p>' +
+            '<p class="location-detail"><span class="material-symbols-rounded icon-sm">schedule</span> ' + l.hours + '</p>' +
+            '<p class="location-detail"><span class="material-symbols-rounded icon-sm">call</span> ' + l.phone + '</p>' +
+            '</' + 'div>'
         ).join('');
 
         window.onload = async () => {
             setupPhoneInput('regPhone');
-            let token = localStorage.getItem('token');
-            if (token) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.role === 'admin' || payload.role === 'employee') {
-                        localStorage.removeItem('token');
-                        token = null;
-                    } else {
-                        const res = await fetch(API + '/user/profile', { headers: { 'Authorization': 'Bearer ' + token } });
-                        if (res.ok) currentUser = await res.json();
-                        else localStorage.removeItem('token');
-                    }
-                } catch (e) {
-                    localStorage.removeItem('token');
-                }
-            }
-            if (currentUser) {
-                document.getElementById('authButtons').style.display = 'none';
-                document.getElementById('profileSection').style.display = 'block';
-                document.getElementById('profileName').innerText = currentUser.fullname || currentUser.email;
-                document.getElementById('profileEmail').innerText = currentUser.email || '';
-                loadCartStorage();
-            } else {
+            await restoreClientAuth();
+            if (!currentUser) {
                 cart = [];
                 document.getElementById('authButtons').style.display = 'flex';
                 document.getElementById('profileSection').style.display = 'none';
@@ -643,130 +856,18 @@ const API = 'http://localhost:3000/api';
             updateCart();
             await loadAllItems();
             await loadCategories();
+            populateCategorySelects();
+            renderPopularProducts();
+            applyCatalogFilters();
+            setupBookingModal();
+            if (window.location.hash === '#booking') {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+                openBookingModal();
+            }
         };
 
-        // Бронирование столов
-        async function loadAvailableTables() {
-            const date = document.getElementById('bookingDate').value;
-            const time = document.getElementById('bookingTime').value;
-            if (!date || !time) return;
-            
-            const res = await fetch(`${API}/tables/availability?date=${date}&time=${time}`);
-            const tables = await res.json();
-            
-            const container = document.getElementById('tablesGrid');
-            container.innerHTML = tables.map(table => `
-                <div onclick="selectTable(${table.id}, ${table.capacity})" 
-                     style="flex:1; min-width: 100px; padding: 15px; text-align: center; 
-                            background: ${table.is_booked ? '#dc3545' : '#28a745'}; 
-                            color: white; border-radius: 12px; cursor: ${table.is_booked ? 'not-allowed' : 'pointer'};
-                            opacity: ${table.is_booked ? 0.6 : 1};">
-                    <span class="material-symbols-rounded">chair</span>
-                    <div>Стол ${table.number}</div>
-                    <div style="font-size: 12px;">${table.capacity} места</div>
-                    <div style="font-size: 11px;">${table.is_booked ? 'Занят' : 'Свободен'}</div>
-                </div>
-            `).join('');
-            
-            window.selectedTableId = null;
-        }
+        // Бронирование — frontend/shared/client-booking.js
 
-        function selectTable(tableId, capacity) {
-            if (!window.selectedTableId) window.selectedTableId = tableId;
-            window.selectedTableId = tableId;
-            
-            document.querySelectorAll('#tablesGrid > div').forEach((el, i) => {
-                if (el.style.background === 'rgb(40, 167, 69)' && el.classList) {
-                    el.style.border = i === tableId - 1 ? '3px solid #2d2418' : 'none';
-                }
-            });
-        }
-
-        async function createBooking() {
-            const date = document.getElementById('bookingDate').value;
-            const time = document.getElementById('bookingTime').value;
-            const guests = document.getElementById('bookingGuests').value;
-            const tableId = window.selectedTableId;
-            
-            if (!date || !time) { notifyError('Выберите дату и время'); return; }
-            if (!tableId) { notifyError('Выберите стол'); return; }
-            
-            const res = await fetch(API + '/bookings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-                body: JSON.stringify({ table_id: tableId, booking_date: date, booking_time: time, guests })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showSuccess('Бронирование создано! Ожидайте подтверждения.');
-                closeModal('bookingModal');
-                loadUserBookings();
-            } else {
-                notifyError(data.error || 'Ошибка бронирования');
-            }
-        }
-
-        async function loadUserBookings() {
-            if (!currentUser) return;
-            const res = await fetch(API + '/my-bookings', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
-            const bookings = await res.json();
-            
-            const container = document.getElementById('myBookingsList');
-            if (!container) return;
-            
-            if (bookings.length === 0) {
-                container.innerHTML = '<p>У вас пока нет бронирований</p>';
-                return;
-            }
-            
-            container.innerHTML = bookings.map(b => `
-                <div style="border-bottom: 1px solid #eee; padding: 15px;">
-                    <div><strong>Стол ${b.table_number}</strong> (${b.capacity} места)</div>
-                    <div>${b.booking_date} в ${b.booking_time}</div>
-                    <div>${b.guests} гостей</div>
-                    <div>Статус: <span style="background: ${b.status === 'подтверждено' ? '#28a745' : b.status === 'ожидает' ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 20px;">${b.status === 'подтверждено' ? 'Подтверждено' : b.status === 'ожидает' ? 'Ожидает' : 'Отменено'}</span></div>
-                    ${b.status === 'ожидает' ? `<button onclick="cancelBooking(${b.id})" style="margin-top:10px; background:#dc3545; border:none; padding:5px 12px; border-radius:20px; color:white; cursor:pointer;">Отменить</button>` : ''}
-                </div>
-            `).join('');
-        }
-
-        async function cancelBooking(bookingId) {
-            if (await showAppConfirm('Отменить это бронирование?', { title: 'Отмена бронирования', confirmLabel: 'Отменить', danger: true })) {
-                await fetch(API + `/bookings/${bookingId}/cancel`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                loadUserBookings();
-            }
-        }
-
-        function showBookingModal() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('bookingDate').min = today;
-            document.getElementById('bookingDate').value = today;
-            document.getElementById('bookingTime').value = '12:00';
-            document.getElementById('bookingModal').style.display = 'flex';
-            loadAvailableTables();
-        }
-
-        function showMyBookings() {
-            loadUserBookings();
-            document.getElementById('myBookingsModal').style.display = 'flex';
-        }
-
-        document.getElementById('bookingDate')?.addEventListener('change', () => {
-            window.selectedTableId = null;
-            document.getElementById('selectedTableDisplay').value = 'Не выбран';
-            document.getElementById('bookingGuests').disabled = true;
-            loadAvailableTables();
-        });
-        document.getElementById('bookingTime')
-        ?.addEventListener('change', () => {
-            window.selectedTableId = null;
-            document.getElementById('selectedTableDisplay').value = 'Не выбран';
-            document.getElementById('bookingGuests').disabled = true;
-            loadAvailableTables();
-        });
 
         // ============ МОДАЛЬНОЕ ОКНО ТОВАРА ============
         function showProductDetails(item) {
@@ -774,17 +875,20 @@ const API = 'http://localhost:3000/api';
             if (!modal) return;
             const title = document.getElementById('productModalTitle');
             const content = document.getElementById('productModalContent');
+            const media = document.getElementById('productModalMedia');
             if (!title || !content) return;
             title.innerText = item.name;
-            const img = item.image_url
-                ? '<img src="' + item.image_url + '" alt="' + item.name + '" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;">'
-                : '<div style="text-align:center;padding:32px;background:#f5e6d3;border-radius:12px;"><span class="material-symbols-rounded" style="font-size:48px;color:#8a6a5a">coffee</span></div>';
-            content.innerHTML = img +
-                '<div style="font-size:22px;font-weight:bold;margin-top:12px;">' + item.price.toFixed(2) + ' BYN</div>' +
-                (item.description ? '<p style="margin-top:12px;font-size:14px;">' + item.description + '</p>' : '') +
-                (item.composition ? '<div style="background:#fef8f0;padding:12px;border-radius:10px;margin-top:10px;"><strong>Состав</strong><br>' + item.composition + '</div>' : '') +
-                '<div style="background:#fef8f0;padding:12px;border-radius:10px;margin-top:10px;"><strong>КБЖУ</strong><br>' +
-                (item.calories || 0) + ' ккал · Б ' + (item.protein || 0) + ' · Ж ' + (item.fat || 0) + ' · У ' + (item.carbs || 0) + '</div>';
+            if (media) {
+                media.innerHTML = item.image_url
+                    ? '<img src="' + item.image_url + '" alt="' + item.name + '">'
+                    : '<div class="product-modal-placeholder"><span class="material-symbols-rounded">coffee</span></div>';
+            }
+            content.innerHTML =
+                '<p class="product-modal-price">' + item.price.toFixed(2) + ' BYN</p>' +
+                (item.description ? '<p class="product-modal-desc">' + item.description + '</p>' : '') +
+                (item.composition ? '<' + 'div class="product-modal-box"><strong>Состав</strong><p>' + item.composition + '</p></' + 'div>' : '') +
+                '<' + 'div class="product-modal-box"><strong>КБЖУ</strong><p>' +
+                (item.calories || 0) + ' ккал · Б ' + (item.protein || 0) + ' · Ж ' + (item.fat || 0) + ' · У ' + (item.carbs || 0) + '</p></' + 'div>';
             const addBtn = document.getElementById('productModalAddBtn');
             if (addBtn) {
                 addBtn.innerHTML = '<span class="material-symbols-rounded icon-sm">add_shopping_cart</span> В корзину';
@@ -795,5 +899,11 @@ const API = 'http://localhost:3000/api';
 
         window.onclick = e => { 
             if (e.target.classList.contains('modal')) e.target.style.display = 'none'; 
-            if (!e.target.closest('.profile-section')) document.getElementById('profileDropdown').classList.remove('show'); 
+            if (!e.target.closest('.profile-section')) document.getElementById('profileDropdown').classList.remove('show');
+            if (!e.target.closest('.search-container')) {
+                const panel = document.getElementById('searchFiltersPanel');
+                const btn = document.getElementById('searchFilterBtn');
+                if (panel) panel.classList.remove('show');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            }
         };
